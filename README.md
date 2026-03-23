@@ -1,6 +1,24 @@
 # README
 
+## Pixset Install
+
+## Downloads
+
+- [Downloads](https://advacam.com/downloads/)
+
+## GUI の Doc
+
+- [PIXset](https://wiki.advacam.cz/wiki/PIXet)
+
+
 ## Python API
+
+- Pixet の情報(python)
+- https://wiki.advacam.cz/wiki/Pixet_SDK
+- https://wiki.advacam.cz/wiki/Python_API
+
+Pixset フォルダにある API の zip を展開するとえられる
+doc PDF 集がある。
 
 USB ファイルの Piext フォルダにある  ZIP ファイルを展開することで
 得られる。pip や setup.py などは存在しないために、
@@ -48,10 +66,6 @@ vcruntime140.dll
 ```
 
 ## Pixet の導入に関しての紆余曲折
-
-- Pixet の情報(python)
-- https://wiki.advacam.cz/wiki/Pixet_SDK
-- https://wiki.advacam.cz/wiki/Python_API
 
 ### 付属USBにある主なファイル
 - PIXet_Pro_1.8.3_Windows_x86_64: GUIアプリケーション本体（通常ユーザー用）
@@ -200,3 +214,4 @@ site.addsitedir(pixet_dir) # .pyd を import 可能にする
 
 import pypixet
 ```
+
