@@ -54,8 +54,13 @@ print("  vendor :", di.vendor)
 pixcfg = dev.pixCfg()
 
 # 全pixelを ToT モードに設定
+# 0 COUNT 一定時間内にヒットした回数（カウント数）を記録
+# 1 TOT (Time Over Threshold) しきい値を超えていた時間幅を記録 → エネルギーに比例
+# 2 TOA (Time Of Arrival) しきい値を超えた時刻を記録
+# 3 ONEHIT 最初の1ヒットのみ記録
+
 pixcfg.setModeAll(
-    pixet.PX_MPX2_OPM_TOT,
+    1,
 )
 
 # threshold
