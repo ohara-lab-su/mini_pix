@@ -23,19 +23,41 @@ pixet = pypixet.pixet
 #   --> GUI で表示されるデバイス名の指定
 # devices = pixet.devicesByType(pixet.PX_DEVTYPE_TPX3)
 devices = pixet.devices()
-for i, dev in enumerate(devices):
-    print("index:", i)
-    print("  fullName :", dev.fullName())
-    print("  deviceType:", dev.deviceType())
-    print("  chipType  :", dev.chipType())
 
-    di = pixet.DevInfo()
-    rc = dev.deviceInfo(di)
-    print(rc, di.name, di.serial, di.type, di.vendor)
+if len(devices) == 0:
+    raise RuntimeError("No devices found")
 
 dev = devices[0]
+
+print("device:")
+print("  fullName :", dev.fullName())
+print("  deviceType:", dev.deviceType())
+print("  chipType  :", dev.chipType())
+
+# --- DevInfo ---
+di = pixet.DevInfo()
+rc = dev.deviceInfo(di)
+
+print("DevInfo:")
+print("  rc     :", rc)
+print("  name   :", di.name)
+print("  serial :", di.serial)
+print("  type   :", di.type)
+print("  vendor :", di.vendor)
+
+# ==========================================================
+# Timepix (Mpx2) は setOperationMode を使わない
+# → pixel configuration で mode を設定
 # dev.setOperationMode(pixet.PX_TPX3_OPM_EVENT_ITOT)
-dev.setOperationMode(pixet.PX_TPX_OPM_EVENT_ITOT)
+# ==========================================================
+
+pixcfg = dev.pixCfg()
+
+# 全pixelを ToT モードに設定
+pixcfg.setModeAll(pixet.PX_TPX_OPM_TOT)
+
+# threshold 例（適宜調整）
+pixcfg.setThreshold(0, 1200)
 
 print("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
 rc = dev.doSimpleAcquisition(
