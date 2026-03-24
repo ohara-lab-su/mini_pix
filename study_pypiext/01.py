@@ -16,13 +16,26 @@ print("pixet core init...")
 pypixet.start()
 # Pixet core のハンドル（メインオブジェクト）を取得
 pixet = pypixet.pixet
+
 # もし、 pixet.devices() だと全デバイス
 # TPX3 デバイスのみ取得。
 # pixet.deviceByName(name)
 #   --> GUI で表示されるデバイス名の指定
-devices = pixet.devicesByType(pixet.PX_DEVTYPE_TPX3)
+# devices = pixet.devicesByType(pixet.PX_DEVTYPE_TPX3)
+devices = pixet.devices()
+for i, dev in enumerate(devices):
+    print("index:", i)
+    print("  fullName :", dev.fullName())
+    print("  deviceType:", dev.deviceType())
+    print("  chipType  :", dev.chipType())
+
+    di = pixet.DevInfo()
+    rc = dev.deviceInfo(di)
+    print(rc, di.name, di.serial, di.type, di.vendor)
+
 dev = devices[0]
-dev.setOperationMode(pixet.PX_TPX3_OPM_EVENT_ITOT)
+# dev.setOperationMode(pixet.PX_TPX3_OPM_EVENT_ITOT)
+dev.setOperationMode(pixet.PX_TPX_OPM_EVENT_ITOT)
 
 print("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
 rc = dev.doSimpleAcquisition(
