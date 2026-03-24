@@ -22,7 +22,6 @@
 - python 3.7 が必要([pyenv-win](https://qiita.com/probabilityhill/items/9a22f395a1e93206c846) で導入をお勧めします)
 - [Python API](#python-api-の導入など)
 
-
 ## AdvaCam Docs
 
 - [PIXet](https://wiki.advacam.cz/wiki/PIXet)
