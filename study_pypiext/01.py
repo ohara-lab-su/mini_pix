@@ -64,27 +64,14 @@ pixcfg.setModeAll(
     pixet.PX_TPXMODE_TOT,
 )
 
-# threshold
-# 0 THL (threshold)
-# 1 FBK
-# 2 IKRUM
-# 3 DISC
-# 4 PREAMP
-# 5 BUFF_ANALOG_A
-# 6 BUFF_ANALOG_B
-# 7 HIST
-# 8 THS
-# 9 DELAY
-# 10 TPBUFF_IN
-# 11 TPBUFF_OUT
-# 12 RPZ
-# 13 GND
-# 14 TPREF
-# 15 FBK2
 
-dev.setDAC(
+# chip chip index（通常 0）
+# value threshold
+# flag 単位指定
+dev.setThreshold(
     0,
-    1200,
+    5.0,
+    pixet.PX_THLFLG_ENERGY,
 )
 
 print("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
