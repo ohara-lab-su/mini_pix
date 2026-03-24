@@ -1,10 +1,71 @@
 # README
 
-## Pixet の導入に関しての紆余曲折
+## Pixset Install
+
+## Downloads
+
+- [Downloads](https://advacam.com/downloads/)
+
+## GUI の Doc
+
+- [PIXset](https://wiki.advacam.cz/wiki/PIXet)
+
+
+## Python API
 
 - Pixet の情報(python)
 - https://wiki.advacam.cz/wiki/Pixet_SDK
 - https://wiki.advacam.cz/wiki/Python_API
+
+Pixset フォルダにある API の zip を展開するとえられる
+doc PDF 集がある。
+
+USB ファイルの Piext フォルダにある  ZIP ファイルを展開することで
+得られる。pip や setup.py などは存在しないために、
+基本的にモジュールファイル(zip解凍で得られる) があるところでも
+python プログラムを実行するか、後述する形で
+```site.addsitedir(pixet_dir)```
+などとして使えるようにする
+
+### モジュールの本体
+
+- pypixet.pyd: 設定、測定、ステータス情報の取得など、すべての基本的なデバイス機能のための基本API
+- pypxproc.pyd: ピクセル処理。クラスタリングおよびスペクトルイメージングオブジェクトで使用
+
+### ログディレクトリ
+
+プログラム実行したディレクトリの logs サブディレクトリ
+
+### その他モジュールを使うときに必要になるファイル
+
+- pixet.ini: プログラムと同じディレクトリ
+```ini
+[Settings]
+Splash=false
+
+[Hwlibs]
+fitpix.dll
+minipix.dll
+widepix.dll
+zem.dll
+zest.dll
+``` 
+
+### 依存ファイル
+
+xcore.dll の依存DLL
+```text
+mfc110.dll
+mfcloop.dll
+msvcp120.dll
+msvcp140.dll
+msvcr110.dll
+msvcr120.dll
+vccorlib140.dll
+vcruntime140.dll
+```
+
+## Pixet の導入に関しての紆余曲折
 
 ### 付属USBにある主なファイル
 - PIXet_Pro_1.8.3_Windows_x86_64: GUIアプリケーション本体（通常ユーザー用）
@@ -153,3 +214,4 @@ site.addsitedir(pixet_dir) # .pyd を import 可能にする
 
 import pypixet
 ```
+
