@@ -61,7 +61,7 @@ pixcfg = dev.pixCfg()
 # 3 ONEHIT 最初の1ヒットのみ記録
 
 pixcfg.setModeAll(
-    1,
+    pixet.pixet.PX_TPXMODE_TOT,
 )
 
 # threshold
@@ -82,7 +82,7 @@ pixcfg.setModeAll(
 # 14 TPREF
 # 15 FBK2
 
-pixcfg.setDAC(
+dev.setDAC(
     0,
     1200,
 )
