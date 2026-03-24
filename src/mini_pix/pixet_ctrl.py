@@ -127,21 +127,133 @@ class MiniPixCtrl:
             self._pixet.PX_THLFLG_ENERGY,  # flag 単位指定
         )
 
+    # ----------------------------
+    # 撮像をメモリに入れるためのサポート
+    # ----------------------------
+
+    def _get_frame_size(
+        self,
+        frame,
+        data_len: int,
+    ) -> tuple[int, int]:
+        for obj in (frame, self._dev):
+            try:
+                width = int(obj.width())
+                height = int(obj.height())
+                if width > 0 and height > 0:
+                    return width, height
+            except Exception:
+                pass
+
+        side = int(data_len**0.5)
+        if side * side != data_len:
+            raise RuntimeError(f"cannot infer frame size from pixel count: {data_len}")
+        return side, side
+
+    def _frame_to_dict(self, frame) -> dict:
+        frame_name = "frame"
+        try:
+            frame_name = str(frame.frameName())
+        except Exception:
+            pass
+
+        data = list(frame.data())
+        width, height = self._get_frame_size(frame, len(data))
+
+        item = {
+            "name": frame_name,
+            "width": width,
+            "height": height,
+            "data": data,
+            "subframes": [],
+        }
+
+        try:
+            subframes = list(frame.subFrames())
+        except Exception:
+            subframes = []
+
+        for sub in subframes:
+            try:
+                sub_name = str(sub.frameName())
+            except Exception:
+                sub_name = "subframe"
+
+            try:
+                sub_data = list(sub.data())
+                sub_width, sub_height = self._get_frame_size(sub, len(sub_data))
+                item["subframes"].append(
+                    {
+                        "name": sub_name,
+                        "width": sub_width,
+                        "height": sub_height,
+                        "data": sub_data,
+                    }
+                )
+            finally:
+                try:
+                    sub.destroy()
+                except Exception:
+                    pass
+
+        return item
+
+    def _collect_acq_frames(self) -> dict:
+        frame_count = int(self._dev.acqFrameCount())
+        frames = []
+
+        for idx in range(frame_count):
+            frame = self._dev.acqFrameRefInc(idx)
+            try:
+                frames.append(self._frame_to_dict(frame))
+            finally:
+                try:
+                    frame.destroy()
+                except Exception:
+                    pass
+
+        return {
+            "frame_count": frame_count,
+            "frames": frames,
+        }
+
+    # ----------------------------
+    # 撮像
+    # ----------------------------
+
     def simple_acq(
         self,
         count: int,
         sec: float,
         name: str = "example.png",
+        *,
+        save_file: bool = True,
+        return_data: bool = False,
     ):
         self._logger.info("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
+
+        output_name = name if save_file else ""
 
         rc = self._dev.doSimpleAcquisition(
             count,  # count (Acqの回数=フレーム数)
             sec,  # 測定時間
             self._pixet.PX_FTYPE_AUTODETECT,  # 保存形式
-            name,  # ファイル名
+            output_name,  # ファイル名
         )
         self._logger.info(f"dev.doSimpleAcquisition - end: {rc} (0 is OK)")
+
+        if rc != 0:
+            raise RuntimeError(f"doSimpleAcquisition failed: rc={rc}")
+
+        if not return_data:
+            return rc
+
+        result = {
+            "rc": int(rc),
+            "saved_file": output_name,
+        }
+        result.update(self._collect_acq_frames())
+        return result
 
         # self._pixet.PX_FTYPE_PNG
         # self._pixet.PX_FTYPE_TPX3_PIXELS
