@@ -51,6 +51,8 @@ print("  vendor :", di.vendor)
 # dev.setOperationMode(pixet.PX_TPX3_OPM_EVENT_ITOT)
 # ==========================================================
 
+# 各ピクセルに展開される行列設定
+# mode, mask, pixel ごとの threshoild correction
 pixcfg = dev.pixCfg()
 
 pixcfg.setModeAll(
@@ -63,10 +65,11 @@ pixcfg.setModeAll(
     pixet.PX_TPXMODE_TOT,
 )
 
+# デバイス全体の設定と測定実行
 dev.setThreshold(
-    0, # chip chip index（通常 0）
-    5.0, # value threshold
-    pixet.PX_THLFLG_ENERGY, # flag 単位指定
+    0,  # chip chip index（通常 0）
+    5.0,  # value threshold
+    pixet.PX_THLFLG_ENERGY,  # flag 単位指定
 )
 
 print("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
