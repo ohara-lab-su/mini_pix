@@ -65,11 +65,23 @@ pixcfg.setModeAll(
 )
 
 # threshold
-# 0: THL threshold level
-# 1: FBK feedback
-# 2: IKRUM preamp current
-# 3: DISC discriminator bias
-# 4: PREAMP preamp bias
+# 0 THL (threshold)
+# 1 FBK
+# 2 IKRUM
+# 3 DISC
+# 4 PREAMP
+# 5 BUFF_ANALOG_A
+# 6 BUFF_ANALOG_B
+# 7 HIST
+# 8 THS
+# 9 DELAY
+# 10 TPBUFF_IN
+# 11 TPBUFF_OUT
+# 12 RPZ
+# 13 GND
+# 14 TPREF
+# 15 FBK2
+
 pixcfg.setDAC(
     0,
     1200,
