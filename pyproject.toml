@@ -36,7 +36,9 @@ dependencies = [
 "pyyaml",
 "toml",
 #
-"protobuf>=4.21,<5",
+#"protobuf>=4.21,<5", # for python3.7
+"protobuf>=4.21.12", # for python3.7
+"grpcio==1.54.3",  # for pyhon3.7
 #
 "nest_asyncio",
 "sphinx",
