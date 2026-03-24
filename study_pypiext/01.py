@@ -64,10 +64,12 @@ pixcfg.setModeAll(
 )
 
 # threshold
-pixcfg.setThreshold(
-    0,
-    1200,
-)
+# THL threshold level
+# FBK feedback
+# IKRUM preamp current
+# DISC discriminator bias
+# PREAMP preamp bias
+pixcfg.setDAC("THL", 1200)
 
 print("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
 rc = dev.doSimpleAcquisition(
