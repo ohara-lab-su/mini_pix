@@ -35,8 +35,8 @@ class AsyncPixetGrpcClient(AsyncGrpcClient):
             log_level=log_level,
         )
 
-        self._remote_simple_acq = self.simple_acq
-        self.simple_acq = self._simple_acq_local
+        self._grpc_simple_acq = self.simple_acq
+        self.simple_acq = self._simple_acq_async
 
     @staticmethod
     def _format_file_name(value: str) -> str:
@@ -44,7 +44,7 @@ class AsyncPixetGrpcClient(AsyncGrpcClient):
         return text or "frame"
 
     @staticmethod
-    def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
+    def _make_png_chunk(chunk_type: bytes, data: bytes) -> bytes:
         return (
             struct.pack("!I", len(data))
             + chunk_type
@@ -70,10 +70,9 @@ class AsyncPixetGrpcClient(AsyncGrpcClient):
         scale = 1.0 if max_value <= 0 else 65535.0 / float(max_value)
 
         raw = bytearray()
-        row_size = width
-        for y in range(height):
+        for row_index in range(height):
             raw.append(0)
-            row = pixels[y * row_size : (y + 1) * row_size]
+            row = pixels[row_index * width : (row_index + 1) * width]
             for value in row:
                 scaled = int(max(0, min(65535, round(value * scale))))
                 raw.extend(struct.pack("!H", scaled))
@@ -83,9 +82,9 @@ class AsyncPixetGrpcClient(AsyncGrpcClient):
 
         png = bytearray()
         png.extend(b"\x89PNG\r\n\x1a\n")
-        png.extend(cls._png_chunk(b"IHDR", ihdr))
-        png.extend(cls._png_chunk(b"IDAT", idat))
-        png.extend(cls._png_chunk(b"IEND", b""))
+        png.extend(cls._make_png_chunk(b"IHDR", ihdr))
+        png.extend(cls._make_png_chunk(b"IDAT", idat))
+        png.extend(cls._make_png_chunk(b"IEND", b""))
 
         path.write_bytes(bytes(png))
 
@@ -163,7 +162,22 @@ class AsyncPixetGrpcClient(AsyncGrpcClient):
                     subframe["data"],
                 )
 
-    async def _simple_acq_local(
+    def _finish_simple_acq(
+        self,
+        result: dict,
+        name: str,
+        save_local: bool,
+        return_data: bool,
+    ):
+        if save_local:
+            self._save_result_files(result, name)
+
+        if return_data:
+            return result
+
+        return result["rc"]
+
+    async def _simple_acq_async(
         self,
         count: int,
         sec: float,
@@ -173,18 +187,44 @@ class AsyncPixetGrpcClient(AsyncGrpcClient):
         save_local: bool = True,
         return_data: bool = False,
     ):
-        result = await self._remote_simple_acq(
+        result = await self._grpc_simple_acq(
             count,
             sec,
             name=name,
             save_file=save_file,
             return_data=True,
         )
+        return self._finish_simple_acq(result, name, save_local, return_data)
 
-        if save_local:
-            self._save_result_files(result, name)
 
-        if return_data:
-            return result
+if __name__ == "__main__":
+    import asyncio
 
-        return result["rc"]
+    from x_logger import XLogger
+
+    async def main() -> None:
+        logger_ = XLogger(
+            log_level="INFO",
+            logger_name="AsyncPixetGrpcClient",
+        )
+
+        client = AsyncPixetGrpcClient(
+            server_ip="127.0.0.1",
+            server_port=50051,
+            logger=logger_,
+            log_level="INFO",
+        )
+
+        try:
+            await client.connect()
+            await client.set_mode_all("TOT")
+            await client.set_threshold(1000)
+            await client.simple_acq(1, 1.0, "example.png")
+        finally:
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
+            # client.close()
+
+    asyncio.run(main())

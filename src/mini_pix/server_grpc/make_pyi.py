@@ -14,13 +14,13 @@ def main() -> None:
     grpc_base = pathlib.Path(grpc_frame.__file__).resolve().parent
 
     generate_client_pyi(
-        client_py=base / "pixet_grpc_client.py",
-        client_class="PixetGrpcClient",
+        client_py=base / "sync_pixet_grpc_client.py",
+        client_class="SyncPixetGrpcClient",
         ctrl_py=(base / "../pixet_ctrl.py").resolve(),
         ctrl_class="MiniPixCtrl",
         base_py=grpc_base / "grpc_client.py",
-        base_class="GrpcClient",
-        out_path=base / "pixet_grpc_client.pyi",
+        base_class="SyncGrpcClient",
+        out_path=base / "sync_pixet_grpc_client.pyi",
         ctrl_async=False,
     )
 
@@ -30,7 +30,7 @@ def main() -> None:
         ctrl_py=(base / "../pixet_ctrl.py").resolve(),
         ctrl_class="MiniPixCtrl",
         base_py=grpc_base / "grpc_client.py",
-        base_class="GrpcClient",
+        base_class="AsyncGrpcClient",
         out_path=base / "async_pixet_grpc_client.pyi",
         ctrl_async=True,
     )
