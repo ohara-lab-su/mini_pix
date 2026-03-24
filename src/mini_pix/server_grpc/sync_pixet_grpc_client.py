@@ -1,32 +1,20 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Any, Optional
 
 from grpc_frame import SyncGrpcClient
 from mini_pix.server_grpc.async_pixet_grpc_client import AsyncPixetGrpcClient
 
 
-class SyncPixetGrpcClient(
-    SyncGrpcClient,
-    AsyncPixetGrpcClient,
-):
+class SyncPixetGrpcClient(AsyncPixetGrpcClient, SyncGrpcClient):
     def __init__(
         self,
-        config: Optional[Any] = None,
-        server_ip: Optional[str] = None,
-        server_port: Optional[int] = None,
+        server_ip: str,
+        server_port: int,
         timeout_sec: Optional[float] = None,
         logger: Optional[Any] = None,
         log_level: Optional[str] = None,
     ) -> None:
-        if config is not None:
-            server_ip = config.SERVER_IP
-            server_port = config.GRPC_PORT
-
-        if server_ip is None or server_port is None:
-            raise ValueError("server_ip and server_port are required")
-
         SyncGrpcClient.__init__(
             self,
             server_ip=server_ip,
@@ -36,23 +24,6 @@ class SyncPixetGrpcClient(
             log_level=log_level,
         )
 
-        # --- coroutine を同期化する wrapper ---
-
-        self._grpc_connect = self.connect
-        self.connect = lambda: asyncio.run(self._grpc_connect())
-
-        self._grpc_disconnect = self.disconnect
-        self.disconnect = lambda: asyncio.run(self._grpc_disconnect())
-
-        self._grpc_set_mode_all = self.set_mode_all
-        self.set_mode_all = lambda mode: asyncio.run(self._grpc_set_mode_all(mode))
-
-        self._grpc_set_threshold = self.set_threshold
-        self.set_threshold = lambda threshold: asyncio.run(
-            self._grpc_set_threshold(threshold)
-        )
-
-        # simple_acq だけ独自 postprocess があるため別扱い
         self._grpc_simple_acq = self.simple_acq
         self.simple_acq = self._simple_acq_sync
 
@@ -66,22 +37,14 @@ class SyncPixetGrpcClient(
         save_local: bool = True,
         return_data: bool = False,
     ):
-        result = asyncio.run(
-            self._grpc_simple_acq(
-                count,
-                sec,
-                name=name,
-                save_file=save_file,
-                return_data=True,
-            )
+        result = self._grpc_simple_acq(
+            count,
+            sec,
+            name=name,
+            save_file=save_file,
+            return_data=True,
         )
-
-        return self._finish_simple_acq(
-            result,
-            name,
-            save_local,
-            return_data,
-        )
+        return self._finish_simple_acq(result, name, save_local, return_data)
 
 
 if __name__ == "__main__":
@@ -109,4 +72,3 @@ if __name__ == "__main__":
             client.disconnect()
         except Exception:
             pass
-        # client.close()
