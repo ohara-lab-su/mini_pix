@@ -112,7 +112,7 @@ class MiniPixCtrl:
         )
 
         self._pixcfg.setModeAll(
-            mode,
+            pixet_const,
         )
         self._pixcfg.setToDevice()
 
