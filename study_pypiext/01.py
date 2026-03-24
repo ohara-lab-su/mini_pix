@@ -54,8 +54,6 @@ print("  vendor :", di.vendor)
 pixcfg = dev.pixCfg()
 
 # DAC 一覧
-for d in pixcfg.dacNames():
-    print(d)
 # 全pixelを ToT モードに設定
 # 0 COUNT 一定時間内にヒットした回数（カウント数）を記録
 # 1 TOT (Time Over Threshold) しきい値を超えていた時間幅を記録 → エネルギーに比例
@@ -67,12 +65,15 @@ pixcfg.setModeAll(
 )
 
 # threshold
-# THL threshold level
-# FBK feedback
-# IKRUM preamp current
-# DISC discriminator bias
-# PREAMP preamp bias
-pixcfg.setDAC("THL", 1200)
+# 0: THL threshold level
+# 1: FBK feedback
+# 2: IKRUM preamp current
+# 3: DISC discriminator bias
+# 4: PREAMP preamp bias
+pixcfg.setDAC(
+    0,
+    1200,
+)
 
 print("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
 rc = dev.doSimpleAcquisition(
