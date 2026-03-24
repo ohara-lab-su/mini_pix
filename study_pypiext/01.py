@@ -54,10 +54,15 @@ print("  vendor :", di.vendor)
 pixcfg = dev.pixCfg()
 
 # 全pixelを ToT モードに設定
-pixcfg.setModeAll(pixet.PX_TPX_OPM_TOT)
+pixcfg.setModeAll(
+    pixet.PX_MPX2_OPM_TOT,
+)
 
-# threshold 例（適宜調整）
-pixcfg.setThreshold(0, 1200)
+# threshold
+pixcfg.setThreshold(
+    0,
+    1200,
+)
 
 print("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
 rc = dev.doSimpleAcquisition(
