@@ -61,7 +61,7 @@ pixcfg = dev.pixCfg()
 # 3 ONEHIT 最初の1ヒットのみ記録
 
 pixcfg.setModeAll(
-    pixet.pixet.PX_TPXMODE_TOT,
+    pixet.PX_TPXMODE_TOT,
 )
 
 # threshold
