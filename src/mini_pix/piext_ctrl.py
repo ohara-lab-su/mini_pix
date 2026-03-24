@@ -10,6 +10,7 @@ site.addsitedir(pixet_dir)  # .pyd を import 可能にする
 ######################################################
 from typing import Any, Optional, Set, Dict, List, Union, Tuple, Type, TypeVar
 
+from x_logger import XLogger
 import pypixet
 
 
@@ -81,7 +82,7 @@ class MiniPixCtrl:
 
         # 各ピクセルに展開される行列設定
         # mode, mask, pixel ごとの threshoild correction
-        self._pixcfg = dev.pixCfg()
+        self._pixcfg = self._dev.pixCfg()
 
         # 全ビクセル
         self._pixcfg.setModeAll(
@@ -157,7 +158,9 @@ class MiniPixCtrl:
 
 
 if __name__ == "__main__":
+    logger_ = XLogger(log_level="INFO")
     ctrl = MiniPixCtrl()
+
     ctrl.connect()
     ctrl.set_mode_all("TOT")
     ctrl.set_threshold(1000)
