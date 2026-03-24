@@ -135,7 +135,7 @@ class MiniPixCtrl:
         self,
         frame,
         data_len: int,
-    ) -> tuple[int, int]:
+    ) -> Tuple[int, int]:
         for obj in (frame, self._dev):
             try:
                 width = int(obj.width())
