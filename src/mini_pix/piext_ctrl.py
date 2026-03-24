@@ -164,5 +164,5 @@ if __name__ == "__main__":
     ctrl.connect()
     ctrl.set_mode_all("TOT")
     ctrl.set_threshold(1000)
-    ctrl.simple_acq(3, 1, "example.png")
+    ctrl.simple_acq(1, 1, "example.png")
     ctrl.disconnect()
