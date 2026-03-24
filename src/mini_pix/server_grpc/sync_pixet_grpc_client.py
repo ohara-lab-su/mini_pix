@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Optional
 
 from grpc_frame import SyncGrpcClient
@@ -35,6 +36,23 @@ class SyncPixetGrpcClient(
             log_level=log_level,
         )
 
+        # --- coroutine を同期化する wrapper ---
+
+        self._grpc_connect = self.connect
+        self.connect = lambda: asyncio.run(self._grpc_connect())
+
+        self._grpc_disconnect = self.disconnect
+        self.disconnect = lambda: asyncio.run(self._grpc_disconnect())
+
+        self._grpc_set_mode_all = self.set_mode_all
+        self.set_mode_all = lambda mode: asyncio.run(self._grpc_set_mode_all(mode))
+
+        self._grpc_set_threshold = self.set_threshold
+        self.set_threshold = lambda threshold: asyncio.run(
+            self._grpc_set_threshold(threshold)
+        )
+
+        # simple_acq だけ独自 postprocess があるため別扱い
         self._grpc_simple_acq = self.simple_acq
         self.simple_acq = self._simple_acq_sync
 
@@ -48,14 +66,22 @@ class SyncPixetGrpcClient(
         save_local: bool = True,
         return_data: bool = False,
     ):
-        result = self._grpc_simple_acq(
-            count,
-            sec,
-            name=name,
-            save_file=save_file,
-            return_data=True,
+        result = asyncio.run(
+            self._grpc_simple_acq(
+                count,
+                sec,
+                name=name,
+                save_file=save_file,
+                return_data=True,
+            )
         )
-        return self._finish_simple_acq(result, name, save_local, return_data)
+
+        return self._finish_simple_acq(
+            result,
+            name,
+            save_local,
+            return_data,
+        )
 
 
 if __name__ == "__main__":
