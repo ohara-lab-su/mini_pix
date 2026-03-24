@@ -1,3 +1,6 @@
+"""
+測定プログラム + 画像フレーム取得の基本テスト
+"""
 ######################################################
 import os
 import site
@@ -63,10 +66,11 @@ def write_data_bin(path, data):
 
 
 print("dev.doSimpleAcquisition - start")
+# 測定とともに画像をファイルに保存
 rc = dev.doSimpleAcquisition(
     1,
     1,
-    pixet.PX_FTYPE_BINARY_FRAME,
+    pixet.PX_FTYPE_BINARY_FRAME, # フレームをバイナリ形式で保存
     "example.pbf",
 )
 print("dev.doSimpleAcquisition - end:", rc, "(0 is OK)")
@@ -74,6 +78,7 @@ print("dev.doSimpleAcquisition - end:", rc, "(0 is OK)")
 if rc != 0:
     raise RuntimeError("doSimpleAcquisition failed")
 
+# 先ほど測定した画像フレームを取得
 frame = dev.acqFrameRefInc(0)
 try:
     data = list(frame.data())
@@ -83,6 +88,7 @@ finally:
     except Exception:
         pass
 
+# 取得したフレームデーターをバイナリ保存
 write_data_bin("example_from_data.bin", data)
 
 saved_bytes = Path("example.pbf").read_bytes()
