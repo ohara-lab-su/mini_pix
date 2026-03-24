@@ -141,7 +141,7 @@ class MiniPixCtrl:
             self._pixet.PX_FTYPE_AUTODETECT,  # 保存形式
             name,  # ファイル名
         )
-        self._logger.info("dev.doSimpleAcquisition - end:", rc, "(0 is OK)")
+        self._logger.info(f"dev.doSimpleAcquisition - end: {rc} (0 is OK)")
 
         # self._pixet.PX_FTYPE_PNG
         # self._pixet.PX_FTYPE_TPX3_PIXELS
