@@ -53,25 +53,20 @@ print("  vendor :", di.vendor)
 
 pixcfg = dev.pixCfg()
 
-# DAC 一覧
-# 全pixelを ToT モードに設定
-# 0 COUNT 一定時間内にヒットした回数（カウント数）を記録
-# 1 TOT (Time Over Threshold) しきい値を超えていた時間幅を記録 → エネルギーに比例
-# 2 TOA (Time Of Arrival) しきい値を超えた時刻を記録
-# 3 ONEHIT 最初の1ヒットのみ記録
-
 pixcfg.setModeAll(
+    # DAC 一覧
+    # 全pixelを ToT モードに設定
+    # 0 COUNT 一定時間内にヒットした回数（カウント数）を記録
+    # 1 TOT (Time Over Threshold) しきい値を超えていた時間幅を記録 → エネルギーに比例
+    # 2 TOA (Time Of Arrival) しきい値を超えた時刻を記録
+    # 3 ONEHIT 最初の1ヒットのみ記録
     pixet.PX_TPXMODE_TOT,
 )
 
-
-# chip chip index（通常 0）
-# value threshold
-# flag 単位指定
 dev.setThreshold(
-    0,
-    5.0,
-    pixet.PX_THLFLG_ENERGY,
+    0, # chip chip index（通常 0）
+    5.0, # value threshold
+    pixet.PX_THLFLG_ENERGY, # flag 単位指定
 )
 
 print("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
