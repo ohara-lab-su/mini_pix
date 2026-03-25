@@ -15,6 +15,10 @@ import pypixet
 
 
 class MiniPixCtrl:
+    """
+    今基本的には MPX2 相当で作っている
+    """
+
     def __init__(
         self,
         logger: Optional[Any] = None,
@@ -30,15 +34,28 @@ class MiniPixCtrl:
             # logger = get_silent_logger())
 
         self._logger = logger
+
+        # --- 基本オブジェクト
         self._dev = None
         self._pixcfg = None
         self._pixet = None
 
     def disconnect(self):
         self._logger.info("pixet core exit...")
+
+        if self._pixet is not None:
+            try:
+                self._pixet.exitPixet()
+            except Exception:
+                pass
+
         pypixet.exit()
 
-    def connect(self):
+        self._dev = None
+        self._pixcfg = None
+        self._pixet = None
+
+    def connect(self) -> bool:
         self._logger.info("pixet core init...")
         # Piext core の起動
         pypixet.start()
@@ -54,9 +71,16 @@ class MiniPixCtrl:
         devices = self._pixet.devices()
 
         if len(devices) == 0:
-            raise RuntimeError("No devices found")
+            self._logger.error("No devices found")
+            return False
 
         self._dev = devices[0]
+
+        if self._dev.fullName() == "FileDevice 0":
+            self._logger.error(
+                "No physical detector found. Pixet returned FileDevice 0."
+            )
+            return False
 
         self._logger.info("device:")
         self._logger.info(f"  fullName :{self._dev.fullName()}")
@@ -84,8 +108,8 @@ class MiniPixCtrl:
         # mode, mask, pixel ごとの threshoild correction
         self._pixcfg = self._dev.pixCfg()
 
-        # 全ビクセル
-        self._pixcfg.setModeAll(
+        # デフォルト設定: 全ビクセル
+        rc = self._pixcfg.setModeAll(
             # DAC 一覧
             # 全pixelを ToT モードに設定
             # 0 COUNT 一定時間内にヒットした回数（カウント数）を記録
@@ -94,11 +118,33 @@ class MiniPixCtrl:
             # 3 ONEHIT 最初の1ヒットのみ記録
             self._pixet.PX_TPXMODE_TOT,
         )
+        if rc != 0:
+            self._logger.error(
+                f"setModeAll failed: rc={rc}, err={self._dev.lastError()}"
+            )
+            return False
+
+        rc = self._pixcfg.setToDevice()
+        if rc != 0:
+            self._logger.error(
+                f"setToDevice failed: rc={rc}, err={self._dev.lastError()}"
+            )
+            return False
+
+        return True
+
+    # MPX2 では使えない
+    # def set_auto_range(self, enable: bool):
+    #     self._pixcfg.setAutoRange(auto_range)
+
+    # MPX2 では使えない
+    # def set_range(self, min_val: int, max_val: int):
+    #     self._pixcfg.setRange(min_val, max_val)
 
     def set_mode_all(
         self,
         mode: str,
-    ):
+    ) -> bool:
         const_name = {
             "COUNT": "PX_TPXMODE_MEDIPIX",
             "TOT": "PX_TPXMODE_TOT",
@@ -111,44 +157,91 @@ class MiniPixCtrl:
             const_name,
         )
 
-        self._pixcfg.setModeAll(
-            pixet_const,
-        )
-        self._pixcfg.setToDevice()
+        rc = self._pixcfg.setModeAll(pixet_const)
+        if rc != 0:
+            self._logger.error(
+                f"setModeAll failed: rc={rc}, err={self._dev.lastError()}"
+            )
+            return False
+
+        rc = self._pixcfg.setToDevice()
+        if rc != 0:
+            self._logger.error(
+                f"setToDevice failed: rc={rc}, err={self._dev.lastError()}"
+            )
+        return True
 
     def set_threshold(
         self,
-        threshold: float,
-    ):
+        threshold_kev: float,
+    ) -> bool:
+        """
+        keV
+
+        Args:
+            threshold_kev:
+
+        Returns:
+
+        """
         # デバイス全体の設定と測定実行
-        self._dev.setThreshold(
+        rc = self._dev.setThreshold(
             0,  # chip chip index（通常 0）
-            threshold,  # value threshold
-            self._pixet.PX_THLFLG_ENERGY,  # flag 単位指定
+            threshold_kev,  # value threshold
+            self._pixet.PX_THLFLG_ENERGY,  # keV 単位指定(GUIと同じ)
         )
+        # PX_THLFLAG_DAC: DAC値
+        # PX_THLFLG_ENERGY: keV
+        if rc != 0:
+            self._logger.error(
+                f"setThreshold failed: rc={rc}, err={self._dev.lastError()}"
+            )
+            return False
+        return True
+
+    def set_clock(
+        self,
+        clock_mhz: float,
+    ) -> bool:
+        """
+        MHz
+
+        Args:
+            clock_mhz:
+
+        Returns:
+
+        """
+        rc = self._dev.setTimepixClock(clock_mhz)
+        if rc != 0:
+            self._logger.error(
+                f"setTimepixClock failed: rc={rc}, err={self._dev.lastError()}"
+            )
+            return False
+        return True
+
+    def set_bias(
+        self,
+        bias_volt: float,
+    ) -> bool:
+        """
+        V
+
+        Args:
+            bias_volt (float):  V
+
+        Returns:
+
+        """
+        rc = self._dev.setBias(bias_volt)
+        if rc != 0:
+            self._logger.error(f"setBias failed: rc={rc}, err={self._dev.lastError()}")
+            return False
+        return True
 
     # ----------------------------
     # 撮像をメモリに入れるためのサポート
     # ----------------------------
-
-    def _get_frame_size(
-        self,
-        frame,
-        data_len: int,
-    ) -> tuple[int, int]:
-        for obj in (frame, self._dev):
-            try:
-                width = int(obj.width())
-                height = int(obj.height())
-                if width > 0 and height > 0:
-                    return width, height
-            except Exception:
-                pass
-
-        side = int(data_len**0.5)
-        if side * side != data_len:
-            raise RuntimeError(f"cannot infer frame size from pixel count: {data_len}")
-        return side, side
 
     def _frame_to_dict(self, frame) -> dict:
         frame_name = "frame"
@@ -158,7 +251,7 @@ class MiniPixCtrl:
             pass
 
         data = list(frame.data())
-        width, height = self._get_frame_size(frame, len(data))
+        width, height = self.get_frame_size(frame, len(data))
 
         item = {
             "name": frame_name,
@@ -181,7 +274,7 @@ class MiniPixCtrl:
 
             try:
                 sub_data = list(sub.data())
-                sub_width, sub_height = self._get_frame_size(sub, len(sub_data))
+                sub_width, sub_height = self.get_frame_size(sub, len(sub_data))
                 item["subframes"].append(
                     {
                         "name": sub_name,
@@ -198,61 +291,177 @@ class MiniPixCtrl:
 
         return item
 
-    def _collect_acq_frames(self) -> dict:
-        frame_count = int(self._dev.acqFrameCount())
-        frames = []
+    # ----------------------------
+    # 撮像
+    # ----------------------------
 
-        for idx in range(frame_count):
-            frame = self._dev.acqFrameRefInc(idx)
+    def get_frame_size(
+        self,
+        frame,
+        data_len: int,
+    ) -> Tuple[int, int]:
+        """
+
+        Args:
+            frame:
+            data_len:
+
+        Returns:
+
+        """
+        for obj in (frame, self._dev):
             try:
-                frames.append(self._frame_to_dict(frame))
-            finally:
+                width = int(obj.width())
+                height = int(obj.height())
+                if width > 0 and height > 0:
+                    return width, height
+            except Exception:
+                pass
+
+        side = int(data_len**0.5)
+        if side * side != data_len:
+            raise RuntimeError(f"cannot infer frame size from pixel count: {data_len}")
+        return side, side
+
+    def get_acq_frame_count(self) -> int:
+        # acqFrameCount()
+        frame_count = int(self._dev.acqFrameCount())
+        return frame_count
+
+    def get_acq_frames(
+        self,
+        idx: Optional[int] = None,
+    ) -> dict:
+        """
+
+        Args:
+            idx:
+
+        Returns:
+
+        """
+        frames = []
+        if idx is None:
+            # 現在メモリにあるフレーム数
+            frame_count = self.get_acq_frame_count()
+
+            for idx in range(frame_count):
+                frame = self._dev.acqFrameRefInc(idx)
                 try:
-                    frame.destroy()
-                except Exception:
-                    pass
+                    frames.append(self._frame_to_dict(frame))
+                finally:
+                    try:
+                        frame.destroy()
+                    except Exception:
+                        pass
+
+        else:
+            # 指定の1フレーム
+            frame_count = 1
+            frame = self._dev.acqFrameRefInc(idx)
+            frames.append(self._frame_to_dict(frame))
+            try:
+                frame.destroy()
+            except Exception:
+                pass
 
         return {
             "frame_count": frame_count,
             "frames": frames,
         }
 
-    # ----------------------------
-    # 撮像
-    # ----------------------------
+    def get_acq_data_count(self):
+        # acqDataCount()
+        pass
+
+    def get_acq_data(self, idx) -> dict:
+        # acqDataRefInc()
+        pass
+
+    def simple_int_acq(
+        self,
+        count: int,
+        sec: float,
+        name: str = "example.png",
+        file_type: str = "NONE",
+        *,
+        save_file: bool = True,
+        return_data: bool = False,
+    ):
+        """
+        積算 SimpleAcq モード
+        """
+        pass
 
     def simple_acq(
         self,
         count: int,
         sec: float,
         name: str = "example.png",
+        file_type: str = "AUTODETECT",
         *,
         save_file: bool = True,
         return_data: bool = False,
     ):
-        self._logger.info("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
+        """
+        通常の frame モードで、指定した数のフレームを取得する。
+        取得された各フレームは個別に扱われる。
 
-        output_name = name if save_file else ""
+        Args:
+            count:
+            sec:
+            name:
+            file_type: 保存形式
+            save_file:
+            return_data:
 
+        Returns:
+
+        """
+        self._logger.info(f"== simple_acq()")
+
+        file_type_const = {
+            "PNG": self._pixet.PX_FTYPE_PNG,
+            "TPX3_PIXELS": self._pixet.PX_FTYPE_TPX3_PIXELS,
+            "BINARY_FRAME": self._pixet.PX_FTYPE_BINARY_FRAME,
+            "NONE": self._pixet.PX_FTYPE_NONE,
+            "AUTODETECT": self._pixet.PX_FTYPE_AUTODETECT,
+        }[file_type]
+
+        if save_file:
+            if file_type == "NONE":
+                output_name = ""
+            else:
+                output_name = name
+        else:
+            output_name = ""
+
+        self._logger.info(f"file_type = {file_type}")
+        self._logger.info(f"output_name = {output_name}")
+        self._logger.info(f"count = {count}")
+        self._logger.info(f"sec = {sec}")
+        self._logger.info(f"")
+
+        self._logger.info(
+            f"dev.doSimpleAcquisition ({count} frames @ {sec} sec) - start"
+        )
         rc = self._dev.doSimpleAcquisition(
             count,  # count (Acqの回数=フレーム数)
             sec,  # 測定時間
-            self._pixet.PX_FTYPE_AUTODETECT,  # 保存形式
+            file_type_const,  # self._pixet.PX_FTYPE_AUTODETECT,  # 保存形式
             output_name,  # ファイル名
         )
         self._logger.info(f"dev.doSimpleAcquisition - end: {rc} (0 is OK)")
 
         if rc != 0:
-            raise RuntimeError(f"doSimpleAcquisition failed: rc={rc}")
-
-        if not return_data:
-            return rc
+            self._logger.error(f"doSimpleAcquisition failed: rc={rc}")
+            return False
 
         result = {
             "rc": int(rc),
             "saved_file": output_name,
         }
-        result.update(self._collect_acq_frames())
+        result.update(self.get_acq_frames())
         return result
 
         # self._pixet.PX_FTYPE_PNG
@@ -271,10 +480,13 @@ class MiniPixCtrl:
 
 if __name__ == "__main__":
     logger_ = XLogger(log_level="INFO")
-    ctrl = MiniPixCtrl()
+    ctrl = MiniPixCtrl(logger=logger_)
 
     ctrl.connect()
     ctrl.set_mode_all("TOT")
-    ctrl.set_threshold(1000)
-    ctrl.simple_acq(1, 1, "example.png")
+    # ctrl.set_threshold(1000)
+    ctrl.set_threshold(6.0)
+    ctrl.set_bias(150)  # V
+    ctrl.set_clock(9.66667)  # Mhz
+    ctrl.simple_acq(1, 3, "example.png")
     ctrl.disconnect()

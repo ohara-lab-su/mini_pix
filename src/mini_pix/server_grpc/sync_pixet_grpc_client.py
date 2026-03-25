@@ -6,26 +6,15 @@ from grpc_frame import SyncGrpcClient
 from mini_pix.server_grpc.async_pixet_grpc_client import AsyncPixetGrpcClient
 
 
-class SyncPixetGrpcClient(
-    SyncGrpcClient,
-    AsyncPixetGrpcClient,
-):
+class SyncPixetGrpcClient(AsyncPixetGrpcClient, SyncGrpcClient):
     def __init__(
         self,
-        config: Optional[Any] = None,
-        server_ip: Optional[str] = None,
-        server_port: Optional[int] = None,
+        server_ip: str,
+        server_port: int,
         timeout_sec: Optional[float] = None,
         logger: Optional[Any] = None,
         log_level: Optional[str] = None,
     ) -> None:
-        if config is not None:
-            server_ip = config.SERVER_IP
-            server_port = config.GRPC_PORT
-
-        if server_ip is None or server_port is None:
-            raise ValueError("server_ip and server_port are required")
-
         SyncGrpcClient.__init__(
             self,
             server_ip=server_ip,
@@ -76,11 +65,13 @@ if __name__ == "__main__":
     try:
         client.connect()
         client.set_mode_all("TOT")
-        client.set_threshold(1000)
-        client.simple_acq(1, 1.0, "example.png")
+        #client.set_threshold(1000)
+        client.set_threshold(6.0)
+        client.set_bias(150)  # V
+        client.set_clock(9.66667)  # Mhz
+        client.simple_acq(1, 3.0, "example.png")
     finally:
         try:
             client.disconnect()
         except Exception:
             pass
-        # client.close()

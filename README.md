@@ -2,16 +2,35 @@
 
 ## Pixset Install
 
-## Downloads
+### Downloads
 
-- [Downloads](https://advacam.com/downloads/)
+- [Advacam Downloads](https://advacam.com/downloads/)
+- もしくは付属のUSB
 
-## GUI の Doc
+### ドライバなどの導入
 
-- [PIXset](https://wiki.advacam.cz/wiki/PIXet)
+- シリアルドライバ: USB の Drivers ディレクトリ以下の setup を実行(検出器は外した状態で入れる
+- GUIの導入 & ドライバ: USB の Pixet/Pixet_pro_windows の実行
+- 再起動
 
+### Python API のための準備
 
-## Python API
+- [Microsoft Visual C++ Redistributable 2015–2022 (x64)](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-c-v14-redistributable)
+
+### Python API の導入
+
+- python 3.7 が必要([pyenv-win](https://qiita.com/probabilityhill/items/9a22f395a1e93206c846) で導入をお勧めします)
+- [Python API](#python-api-の導入など)
+- ```c:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64``` を準備
+
+## AdvaCam Docs
+
+- [PIXet](https://wiki.advacam.cz/wiki/PIXet)
+- [Pixet SDK](https://wiki.advacam.cz/wiki/Pixet_SDK)
+- [Pixet Python API](https://wiki.advacam.cz/wiki/Python_API)
+
+---
+## Python API の導入など
 
 - Pixet の情報(python)
 - https://wiki.advacam.cz/wiki/Pixet_SDK
@@ -168,7 +187,8 @@ ctypes.WinDLL(os.path.join(dll_dir, "pypixet.pyd"))
 print("OK")
 ```
 
-## 任意の場所にあるモジュールを動かす方法
+---
+## 任意の場所にあるモジュールを動かす方法(まとめ)
 
 ### python <= 3.8
 ```python

@@ -13,20 +13,12 @@ from grpc_frame import AsyncGrpcClient
 class AsyncPixetGrpcClient(AsyncGrpcClient):
     def __init__(
         self,
-        config: Optional[Any] = None,
-        server_ip: Optional[str] = None,
-        server_port: Optional[int] = None,
+        server_ip: str,
+        server_port: int,
         timeout_sec: Optional[float] = None,
         logger: Optional[Any] = None,
         log_level: Optional[str] = None,
     ) -> None:
-        if config is not None:
-            server_ip = config.SERVER_IP
-            server_port = config.GRPC_PORT
-
-        if server_ip is None or server_port is None:
-            raise ValueError("server_ip and server_port are required")
-
         super().__init__(
             server_ip=server_ip,
             server_port=server_port,
@@ -85,7 +77,6 @@ class AsyncPixetGrpcClient(AsyncGrpcClient):
         png.extend(cls._make_png_chunk(b"IHDR", ihdr))
         png.extend(cls._make_png_chunk(b"IDAT", idat))
         png.extend(cls._make_png_chunk(b"IEND", b""))
-
         path.write_bytes(bytes(png))
 
     @classmethod
@@ -128,7 +119,6 @@ class AsyncPixetGrpcClient(AsyncGrpcClient):
                 int(frame["height"]),
                 frame["data"],
             )
-
             for sub_index, subframe in enumerate(frame.get("subframes", [])):
                 subframe_name = cls._format_file_name(
                     str(subframe.get("name", "subframe"))
@@ -149,7 +139,6 @@ class AsyncPixetGrpcClient(AsyncGrpcClient):
                 int(frame["height"]),
                 frame["data"],
             )
-
             for sub_index, subframe in enumerate(frame.get("subframes", [])):
                 subframe_name = cls._format_file_name(
                     str(subframe.get("name", "subframe"))
@@ -171,10 +160,8 @@ class AsyncPixetGrpcClient(AsyncGrpcClient):
     ):
         if save_local:
             self._save_result_files(result, name)
-
         if return_data:
             return result
-
         return result["rc"]
 
     async def _simple_acq_async(
@@ -225,6 +212,5 @@ if __name__ == "__main__":
                 await client.disconnect()
             except Exception:
                 pass
-            # client.close()
 
     asyncio.run(main())

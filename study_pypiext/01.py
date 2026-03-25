@@ -1,3 +1,6 @@
+"""
+測定プログラムの基本テスト1
+"""
 ######################################################
 import os
 import site
@@ -74,7 +77,7 @@ dev.setThreshold(
 
 print("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
 rc = dev.doSimpleAcquisition(
-    3,  # count (Acqの回数=フレーム数)
+    1,  # count (Acqの回数=フレーム数)
     1,  # 測定時間
     pixet.PX_FTYPE_AUTODETECT,  # 保存形式
     "example.png",  # ファイル名
