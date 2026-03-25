@@ -21,7 +21,7 @@ dependencies = [
 "x_logger",
 "coloredlogs",
 "colorlog",
-"ese774_frame",
+# "ese774_frame",
 "setuptools",
 "python-dotenv",
 "fastapi",

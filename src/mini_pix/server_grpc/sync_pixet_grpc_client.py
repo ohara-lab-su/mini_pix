@@ -65,8 +65,11 @@ if __name__ == "__main__":
     try:
         client.connect()
         client.set_mode_all("TOT")
-        client.set_threshold(1000)
-        client.simple_acq(1, 1.0, "example.png")
+        #client.set_threshold(1000)
+        client.set_threshold(6.0)
+        client.set_bias(150)  # V
+        client.set_clock(9.66667)  # Mhz
+        client.simple_acq(1, 3.0, "example.png")
     finally:
         try:
             client.disconnect()
