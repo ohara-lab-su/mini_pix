@@ -221,15 +221,46 @@ class MiniPixCtrl:
     # 撮像
     # ----------------------------
 
-    def simple_acq(
+    def simple_int_acq(
         self,
         count: int,
         sec: float,
+        file_type=self._pixet.PX_FTYPE_AUTODETECT,
         name: str = "example.png",
         *,
         save_file: bool = True,
         return_data: bool = False,
     ):
+        """
+        積算 SimpleAcq モード
+        """
+        pass
+
+    def simple_acq(
+        self,
+        count: int,
+        sec: float,
+        file_type=self._pixet.PX_FTYPE_AUTODETECT,
+        name: str = "example.png",
+        *,
+        save_file: bool = True,
+        return_data: bool = False,
+    ):
+        """
+        通常の frame モードで、指定した数のフレームを取得する。
+        取得された各フレームは個別に扱われる。
+
+        Args:
+            count:
+            sec:
+            name:
+            file_type: 保存形式
+            save_file:
+            return_data:
+
+        Returns:
+
+        """
         self._logger.info("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
 
         output_name = name if save_file else ""
@@ -237,7 +268,7 @@ class MiniPixCtrl:
         rc = self._dev.doSimpleAcquisition(
             count,  # count (Acqの回数=フレーム数)
             sec,  # 測定時間
-            self._pixet.PX_FTYPE_AUTODETECT,  # 保存形式
+            file_type,  # self._pixet.PX_FTYPE_AUTODETECT,  # 保存形式
             output_name,  # ファイル名
         )
         self._logger.info(f"dev.doSimpleAcquisition - end: {rc} (0 is OK)")
