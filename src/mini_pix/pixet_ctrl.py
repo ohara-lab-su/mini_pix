@@ -306,6 +306,8 @@ class MiniPixCtrl:
         Returns:
 
         """
+        self._logger.info(f"== simple_acq()")
+
         file_type_const = {
             "PNG": self._pixet.PX_FTYPE_PNG,
             "TPX3_PIXELS": self._pixet.PX_FTYPE_TPX3_PIXELS,
@@ -313,9 +315,13 @@ class MiniPixCtrl:
             "NONE": self._pixet.PX_FTYPE_NONE,
         }[file_type]
 
-        self._logger.info("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
-
         output_name = name if save_file else ""
+
+        self._logger.info(f"file_type = {file_type}")
+        self._logger.info(f"output_name = {output_name}")
+        self._logger.info(
+            f"dev.doSimpleAcquisition ({count} frames @ {sec} sec) - start"
+        )
 
         rc = self._dev.doSimpleAcquisition(
             count,  # count (Acqの回数=フレーム数)
