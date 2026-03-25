@@ -286,7 +286,7 @@ class MiniPixCtrl:
         count: int,
         sec: float,
         name: str = "example.png",
-        file_type: str = "NONE",
+        file_type: str = "AUTODETECT",
         *,
         save_file: bool = True,
         return_data: bool = False,
@@ -313,7 +313,13 @@ class MiniPixCtrl:
             "TPX3_PIXELS": self._pixet.PX_FTYPE_TPX3_PIXELS,
             "BINARY_FRAME": self._pixet.PX_FTYPE_BINARY_FRAME,
             "NONE": self._pixet.PX_FTYPE_NONE,
+            "AUTODETECT": self._pixet.PX_FTYPE_AUTODETECT,
         }[file_type]
+
+        if file_type == "NONE":
+            output_name = ""
+        else:
+            output_name = name
 
         output_name = name if save_file else ""
 
