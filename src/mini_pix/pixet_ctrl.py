@@ -131,25 +131,6 @@ class MiniPixCtrl:
     # 撮像をメモリに入れるためのサポート
     # ----------------------------
 
-    def _get_frame_size(
-        self,
-        frame,
-        data_len: int,
-    ) -> Tuple[int, int]:
-        for obj in (frame, self._dev):
-            try:
-                width = int(obj.width())
-                height = int(obj.height())
-                if width > 0 and height > 0:
-                    return width, height
-            except Exception:
-                pass
-
-        side = int(data_len**0.5)
-        if side * side != data_len:
-            raise RuntimeError(f"cannot infer frame size from pixel count: {data_len}")
-        return side, side
-
     def _frame_to_dict(self, frame) -> dict:
         frame_name = "frame"
         try:
@@ -158,7 +139,7 @@ class MiniPixCtrl:
             pass
 
         data = list(frame.data())
-        width, height = self._get_frame_size(frame, len(data))
+        width, height = self.get_frame_size(frame, len(data))
 
         item = {
             "name": frame_name,
@@ -181,7 +162,7 @@ class MiniPixCtrl:
 
             try:
                 sub_data = list(sub.data())
-                sub_width, sub_height = self._get_frame_size(sub, len(sub_data))
+                sub_width, sub_height = self.get_frame_size(sub, len(sub_data))
                 item["subframes"].append(
                     {
                         "name": sub_name,
@@ -198,28 +179,92 @@ class MiniPixCtrl:
 
         return item
 
-    def _collect_acq_frames(self) -> dict:
-        frame_count = int(self._dev.acqFrameCount())
-        frames = []
+    # ----------------------------
+    # 撮像
+    # ----------------------------
 
-        for idx in range(frame_count):
-            frame = self._dev.acqFrameRefInc(idx)
+    def get_frame_size(
+        self,
+        frame,
+        data_len: int,
+    ) -> Tuple[int, int]:
+        """
+
+        Args:
+            frame:
+            data_len:
+
+        Returns:
+
+        """
+        for obj in (frame, self._dev):
             try:
-                frames.append(self._frame_to_dict(frame))
-            finally:
+                width = int(obj.width())
+                height = int(obj.height())
+                if width > 0 and height > 0:
+                    return width, height
+            except Exception:
+                pass
+
+        side = int(data_len**0.5)
+        if side * side != data_len:
+            raise RuntimeError(f"cannot infer frame size from pixel count: {data_len}")
+        return side, side
+
+    def get_acq_frame_count(self) -> int:
+        # acqFrameCount()
+        frame_count = int(self._dev.acqFrameCount())
+        return frame_count
+
+    def get_acq_frames(
+        self,
+        idx: Optional[int] = None,
+    ) -> dict:
+        """
+
+        Args:
+            idx:
+
+        Returns:
+
+        """
+        frames = []
+        if idx is None:
+            # 現在メモリにあるフレーム数
+            frame_count = self.get_acq_frame_count()
+
+            for idx in range(frame_count):
+                frame = self._dev.acqFrameRefInc(idx)
                 try:
-                    frame.destroy()
-                except Exception:
-                    pass
+                    frames.append(self._frame_to_dict(frame))
+                finally:
+                    try:
+                        frame.destroy()
+                    except Exception:
+                        pass
+
+        else:
+            # 指定の1フレーム
+            frame_count = 1
+            frame = self._dev.acqFrameRefInc(idx)
+            frames.append(self._frame_to_dict(frame))
+            try:
+                frame.destroy()
+            except Exception:
+                pass
 
         return {
             "frame_count": frame_count,
             "frames": frames,
         }
 
-    # ----------------------------
-    # 撮像
-    # ----------------------------
+    def get_acq_data_count(self):
+        # acqDataCount()
+        pass
+
+    def get_acq_data(self, idx) -> dict:
+        # acqDataRefInc()
+        pass
 
     def simple_int_acq(
         self,
@@ -283,7 +328,7 @@ class MiniPixCtrl:
             "rc": int(rc),
             "saved_file": output_name,
         }
-        result.update(self._collect_acq_frames())
+        result.update(self.get_acq_frames())
         return result
 
         # self._pixet.PX_FTYPE_PNG
