@@ -71,9 +71,16 @@ class MiniPixCtrl:
         devices = self._pixet.devices()
 
         if len(devices) == 0:
-            raise RuntimeError("No devices found")
+            self._logger.error("No devices found")
+            return False
 
         self._dev = devices[0]
+
+        if self._dev.fullName() == "FileDevice 0":
+            self._logger.error(
+                "No physical detector found. Pixet returned FileDevice 0."
+            )
+            return False
 
         self._logger.info("device:")
         self._logger.info(f"  fullName :{self._dev.fullName()}")
@@ -101,7 +108,7 @@ class MiniPixCtrl:
         # mode, mask, pixel ごとの threshoild correction
         self._pixcfg = self._dev.pixCfg()
 
-        # 全ビクセル
+        # デフォルト設定: 全ビクセル
         rc = self._pixcfg.setModeAll(
             # DAC 一覧
             # 全pixelを ToT モードに設定
@@ -116,6 +123,7 @@ class MiniPixCtrl:
                 f"setModeAll failed: rc={rc}, err={self._dev.lastError()}"
             )
             return False
+
         rc = self._pixcfg.setToDevice()
         if rc != 0:
             self._logger.error(
