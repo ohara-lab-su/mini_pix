@@ -270,8 +270,8 @@ class MiniPixCtrl:
         self,
         count: int,
         sec: float,
-        file_type=self._pixet.PX_FTYPE_AUTODETECT,
         name: str = "example.png",
+        file_type: str = "NONE",
         *,
         save_file: bool = True,
         return_data: bool = False,
@@ -285,8 +285,8 @@ class MiniPixCtrl:
         self,
         count: int,
         sec: float,
-        file_type=self._pixet.PX_FTYPE_AUTODETECT,
         name: str = "example.png",
+        file_type: str = "NONE",
         *,
         save_file: bool = True,
         return_data: bool = False,
@@ -306,6 +306,13 @@ class MiniPixCtrl:
         Returns:
 
         """
+        file_type_const = {
+            "PNG": self._pixet.PX_FTYPE_PNG,
+            "TPX3_PIXELS": self._pixet.PX_FTYPE_TPX3_PIXELS,
+            "BINARY_FRAME": self._pixet.PX_FTYPE_BINARY_FRAME,
+            "NONE": self._pixet.PX_FTYPE_NONE,
+        }[file_type]
+
         self._logger.info("dev.doSimpleAcquisition (3 frames @ 1 sec) - start")
 
         output_name = name if save_file else ""
@@ -313,7 +320,7 @@ class MiniPixCtrl:
         rc = self._dev.doSimpleAcquisition(
             count,  # count (Acqの回数=フレーム数)
             sec,  # 測定時間
-            file_type,  # self._pixet.PX_FTYPE_AUTODETECT,  # 保存形式
+            file_type_const,  # self._pixet.PX_FTYPE_AUTODETECT,  # 保存形式
             output_name,  # ファイル名
         )
         self._logger.info(f"dev.doSimpleAcquisition - end: {rc} (0 is OK)")
