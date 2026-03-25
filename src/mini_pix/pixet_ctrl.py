@@ -325,10 +325,13 @@ class MiniPixCtrl:
 
         self._logger.info(f"file_type = {file_type}")
         self._logger.info(f"output_name = {output_name}")
+        self._logger.info(f"count = {count}")
+        self._logger.info(f"sec = {sec}")
+        self._logger.info(f"")
+
         self._logger.info(
             f"dev.doSimpleAcquisition ({count} frames @ {sec} sec) - start"
         )
-
         rc = self._dev.doSimpleAcquisition(
             count,  # count (Acqの回数=フレーム数)
             sec,  # 測定時間
@@ -371,5 +374,5 @@ if __name__ == "__main__":
     ctrl.connect()
     ctrl.set_mode_all("TOT")
     ctrl.set_threshold(1000)
-    ctrl.simple_acq(1, 1, "example.png")
+    ctrl.simple_acq(1, 3, "example.png")
     ctrl.disconnect()
