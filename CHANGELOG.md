@@ -1,13 +1,12 @@
 # CHANGELOG
 
-## 2026.06.27 v0.0.1
+## 2026.06.29, v0.0.1, nakada
 
-**ese774_frame v0.4.20 以降が必要**
+・ grpc_frame の DeviceProxy に対応
+・ mini_pix.server_grpc import 時に MiniPixCtrl を DeviceProxy 登録するように変更
+・ DeviceProxy 登録先を ese774_frame ではなく grpc_frame に変更
+・ SyncPixetGrpcClient / AsyncPixetGrpcClient を DeviceProxy から生成できるように変更
+・ server_grpc/make_pyi.py で grpc_frame.make_pyi_device_proxy を使って __init__.pyi を生成するように変更
+・ __init__.pyi は手書きせず、make_pyi.py による生成物として扱う方針に整理
 
-- DeviceProxy 対応
-- DeviceProxy 登録用の `__init__.py` を追加
-- DeviceProxy 用 `__init__.pyi` の生成に対応
-- `make_pyi.py` を DeviceProxy 対応へ変更
-- pyi 自動生成処理を整理し、DeviceProxy 向けの生成を自動化
- 
 ## 2026.03.25, v0.0.0, nakada

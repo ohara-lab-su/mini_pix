@@ -1,213 +1,91 @@
-# チュートリアル
+# gRPC チュートリアル
 
-このセクションでは ese774_frame の使い方を段階的に説明します。
+このページでは、`MiniPixCtrl` を gRPC サーバ側に置き、別プロセスまたは別 PC から MiniPIX を制御する構成を説明します。
 
-例題として単純な制御クラス(ほぼダミー)を用意してese774 frame を使いクライアント側で
-サーバー側の制御クラスを制御します。
+現状の `pixet_ctrl.py` はローカルの `pypixet` を直接呼ぶ実装です。gRPC 化する場合、PIXet Pro と検出器が接続された Windows PC 上でサーバを起動し、利用者プログラムはクライアントとしてアクセスします。
 
-## サーバークラスに食わせる制御クラスを用意する
+## 基本方針
 
-```python
-#!/usr/bin/env python
-from typing import Any, Dict, List, Optional, Tuple
-
-
-class SimpleCtrl:
-    """
-    フレームワークテスト用の最小 Ctrl
-    - 引数/戻り値パターンの検証用
-    """
-
-    def __init__(
-        self,
-        name: str = "simple",
-        logger: Optional[Any] = None,
-    ):
-        self._name = name
-        self._counter = 0
-        self._logger = logger
-
-    # property (属性)
-    @property
-    def name(self) -> str:
-        return self._name
-
-    # 戻り値: str
-    def ping(self) -> str:
-        return "pong"
-
-    # 引数2つ -> int
-    def add(self, a: int, b: int) -> int:
-        return a + b
-
-    # 引数1つ -> str
-    def echo(self, msg: str) -> str:
-        return msg
-
-    # list -> float
-    def sum_list(
-        self,
-        values: List[float],
-    ) -> float:
-        return float(sum(values))
-
-    # kwargs混在 -> dict
-    def mix(
-        self,
-        a: int,
-        b: int = 1,
-        *,
-        scale: float = 1.0,
-        tag: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        val = (a + b) * scale
-        return {"value": val, "tag": tag}
-
-    # tuple 戻り
-    def make_tuple(
-        self,
-        a: int,
-        b: str,
-    ) -> Tuple[int, str]:
-        return (a, b)
-
-    # dict 戻り
-    def make_dict(self, key: str, value: Any) -> Dict[str, Any]:
-        return {key: value}
-
-    # Optional -> Optional
-    def maybe(
-        self,
-        x: Optional[int] = None,
-    ) -> Optional[int]:
-        return x
-
-    # None 戻り
-    def set_name(
-        self,
-        name: str,
-    ) -> None:
-        self._name = name
-
-    # 状態取得
-    def get_state(self) -> Dict[str, Any]:
-        self._counter += 1
-        return {"name": self._name, "counter": self._counter}
-
-    # 一般形の引数 (*args, **kwargs)
-    def general(
-        self,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Dict[str, Any]:
-        return {"args": list(args), "kwargs": dict(kwargs)}
-
+```text
+Client Script
+    │
+    ▼
+gRPC Client
+    │
+    ▼
+gRPC Server on detector PC
+    │
+    ▼
+MiniPixCtrl
+    │
+    ▼
+pypixet / PIXet core
+    │
+    ▼
+MiniPIX Detector
 ```
 
-## 制御クラスをサーバーメソッドに食わせてサーバーを起動する
+この構成では、PIXet API の DLL / `.pyd` の依存関係はサーバ側だけに置きます。クライアント側は PIXet Pro を直接 import しません。
 
-gRPC frame では現在のところ問答無用でサーバーがの機器制御クラスを丸ごと
-クライアントで再現する完全な透過型プロキシです。ese774_frame とことなり
-制御クラスの中から使用するI/Fを呈するという作業はありません。
+## サーバ側で公開する制御クラス
 
-サーバー起動スクリプトを用意する
+サーバ側の制御対象は `MiniPixCtrl` です。
+
 ```python
-#!/usr/bin/env python3
-from __future__ import annotations
+from mini_pix.pixet_ctrl import MiniPixCtrl
 
-import time
-from concurrent import futures
-from typing import Any, Optional
-
-import grpc
-from grpc import channel_ready_future
-
-import grpc_frame.ctrl_pb2_grpc as ctrl_pb2_grpc
-from grpc_frame.grpc_server import _ControlServicer
-from x_logger import XLogger
-
-######################################
-# --- Device Class ---
-from simple_ctrl import SimpleCtrl
-######################################
-
-def simple_server(
-    grpc_host: str,
-    grpc_port: int,
-    interval: float = 0.01,
-    logger: Optional[Any] = None,
-    log_level: Optional[str] = None,
-) -> None:
-    """ """
-    server = grpc.server(
-        futures.ThreadPoolExecutor(max_workers=10),
-    )
-
-    bind_addr: str = f"{grpc_host}:{grpc_port}"
-    ret: int = server.add_insecure_port(bind_addr)
-    if ret == 0:
-        raise RuntimeError(f"bind failed: {bind_addr}")
-
-    logger.info(f"gRPC bind OK: {bind_addr}")
-    
-    server.start()
-
-    # # self-check（旧版と同一）
-    ch = grpc.insecure_channel(bind_addr)
-    channel_ready_future(ch).result(timeout=2.0)
-    logger.info("gRPC self-check OK")
-
-    #######################
-    ctrl = SimpleCtrl()
-    #######################
-
-    servicer = _ControlServicer(
-        ctrl_obj=ctrl,
-        logger=logger,
-        log_level=log_level,
-    )
-
-    ctrl_pb2_grpc.add_ControlServicer_to_server(
-        servicer,
-        server,
-    )
-
-    try:
-        while True:
-            time.sleep(1)
-
-    except KeyboardInterrupt:
-        logger.info("KeyboardInterrupt")
-
-    finally:
-        server.stop(grace=None)
-        logger.info("gRPC server stopped")
-
-        
-if __name__ == "__main__":
-    GRPC_HOST = "localhost"
-    GRPC_PORT = 50051
-    INTERVAL = 0.01
-    LOG_LEVEL = "INFO"
-
-    logger_ = XLogger(
-        log_level=LOG_LEVEL,
-        logger_name="SimpleCtrl",
-    )
-
-    simple_server(
-        grpc_host=GRPC_HOST,
-        grpc_port=GRPC_PORT,
-        interval=INTERVAL,
-        logger=logger_,
-        log_level=LOG_LEVEL,
-    )
+ctrl = MiniPixCtrl(logger=logger)
+ctrl.connect()
 ```
 
-## クライアントクラスを Frame を継承して作る
+公開対象として有用なメソッドは次のとおりです。
 
-## クライアントで制御プログラムを書く
+・ `connect()`  
+・ `disconnect()`  
+・ `set_mode_all(mode)`  
+・ `set_threshold(threshold_kev)`  
+・ `set_clock(clock_mhz)`  
+・ `set_bias(bias_volt)`  
+・ `simple_acq(count, sec, name, file_type, save_file, return_data)`  
+・ `get_acq_frame_count()`  
+・ `get_acq_frames(idx=None)`  
 
----
-## 作者
-- Kengo NAKADA
+`_frame_to_dict()` は内部補助メソッドなので、通常は gRPC 経由で直接公開しません。
+
+## クライアント側の使用イメージ
+
+同期クライアントの使用例です。
+
+```python
+from mini_pix.sync_pixet_grpc_client import SyncPixetGrpcClient
+
+pix = SyncPixetGrpcClient("127.0.0.1", 50051)
+
+pix.connect()
+pix.set_mode_all("TOT")
+pix.set_threshold(6.0)
+pix.set_bias(150.0)
+pix.set_clock(9.66667)
+
+result = pix.simple_acq(
+    count=1,
+    sec=3.0,
+    name="example.png",
+    file_type="PNG",
+    save_file=True,
+)
+
+pix.disconnect()
+```
+
+非同期クライアントを使う場合も、基本的な呼び出し対象は同じです。
+
+## DeviceProxy との関係
+
+DeviceProxy に登録する場合、`MiniPixCtrl` または gRPC クライアントをデバイス実体として扱います。上位アプリケーションからは、ローカル接続か gRPC 接続かを意識せず、同じ制御メソッドを呼ぶ構成を目標にします。
+
+## 注意点
+
+PIXet API と実検出器はサーバ側プロセスでのみ直接扱います。複数クライアントから同時に撮像・設定変更を行うと検出器状態が競合するため、サーバ側で逐次化する構成が必要です。
+
+また、`simple_acq()` の戻り値はフレーム `data` を list として含むため、フレーム数が多い場合は gRPC 応答が大きくなります。大量データ取得では、ファイル保存とメタデータ返却を分ける設計を検討してください。

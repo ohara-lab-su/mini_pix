@@ -15,7 +15,7 @@ mini_pix.server_grpc の pyi 生成用 make_pyi.py である。
 
 方針:
 ・ gRPC client pyi は grpc_frame.make_pyi.generate_client_pyi を使う。
-・ DeviceProxy 用 __init__.pyi は ese774_frame の make_pyi_device_proxy を使う。
+・ DeviceProxy 用 __init__.pyi は grpc_frame の make_pyi_device_proxy を使う。
 ・ DeviceProxy 登録用 __init__.py はこのスクリプトから生成する。
 ・ pixet_ctrl.py は制御本体であり、__init__.py には import しない。
 ・ client 側で実装されている simple_acq の上書きと補助メソッドは、生成 pyi 後に補正する。
@@ -29,7 +29,7 @@ from pathlib import Path
 import grpc_frame
 from grpc_frame.make_pyi import generate_client_pyi
 
-from ese774_frame.clients.make_pyi_device_proxy import make_pyi_device_proxy
+from grpc_frame.make_pyi_device_proxy import make_pyi_device_proxy
 
 
 PACKAGE_NAME = "mini_pix"
@@ -298,7 +298,7 @@ from mini_pix.server_grpc.sync_pixet_grpc_client import SyncPixetGrpcClient
 from mini_pix.server_grpc.pixet_grpc_server import pixet_grpc_server
 from mini_pix.server_grpc.pixet_grpc_server import pixet_server
 
-from ese774_frame.clients import register_device_proxy
+from grpc_frame import register_device_proxy
 
 
 DEVICE_PROXY_NAME = "{device_proxy_name}"

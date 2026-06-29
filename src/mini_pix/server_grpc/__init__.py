@@ -7,7 +7,7 @@ from mini_pix.server_grpc.sync_pixet_grpc_client import SyncPixetGrpcClient
 from mini_pix.server_grpc.pixet_grpc_server import pixet_grpc_server
 from mini_pix.server_grpc.pixet_grpc_server import pixet_server
 
-from ese774_frame.clients import register_device_proxy
+from grpc_frame import register_device_proxy
 
 
 DEVICE_PROXY_NAME = "mini_pix"
