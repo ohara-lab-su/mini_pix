@@ -1,17 +1,10 @@
-# チュートリアル
+# Tutorials
 
----
 ```{toctree}
-:maxdepth: 4
-:caption: Contents:
+:maxdepth: 1
 
 quick_start
+architecture
+grpc
+python_api
 ```
----
-
-
-
-
----
-## 作者
-- Kengo NAKADA
