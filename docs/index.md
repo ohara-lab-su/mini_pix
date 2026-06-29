@@ -12,7 +12,6 @@ function/index
 ```
 ---
 
-
 ---
 ## 作者
 - Kengo NAKADA
