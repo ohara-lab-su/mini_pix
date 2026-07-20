@@ -38,6 +38,7 @@ jobs:
         run: |
           export LANG=C.UTF-8
           export LC_ALL=C.UTF-8
+          sphinx-apidoc -f -o api ../src
           sphinx-build -b html . _build/html
 
 
