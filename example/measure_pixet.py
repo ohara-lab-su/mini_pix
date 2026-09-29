@@ -10,7 +10,8 @@ from x_logger import XLogger
 
 
 # gRPC server
-SERVER_IP = "127.0.0.1"
+# SERVER_IP = "127.0.0.1"
+SERVER_IP = "10.170.10.38"
 SERVER_PORT = 50051
 TIMEOUT_SEC = 30.0
 

@@ -4,7 +4,8 @@
 from mini_pix.server_grpc import pixet_grpc_server
 
 
-GRPC_HOST = "0.0.0.0"
+#GRPC_HOST = "0.0.0.0"
+GRPC_HOST = "10.170.10.38"
 GRPC_PORT = 50051
 AUTO_CONNECT = True
 LOG_LEVEL = "INFO"
