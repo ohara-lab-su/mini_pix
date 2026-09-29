@@ -395,15 +395,81 @@ class MiniPixCtrl:
         count: int,
         sec: float,
         name: str = "example.png",
-        file_type: str = "NONE",
+        file_type: str = "AUTODETECT",
         *,
         save_file: bool = True,
         return_data: bool = False,
     ):
         """
-        積算 SimpleAcq モード
+        Integral モードで、指定した数のフレームを取得して1フレームに積算する。
+
+        Pixet Pro GUI の Measurement -> Type -> Integral に対応する。
+        Pixet Python API の doSimpleIntegralAcquisition() を使用する。
+
+        Args:
+            count: 積算するフレーム数。
+            sec: 1フレームあたりの測定時間 [s]。
+            name: 保存ファイル名。
+            file_type: 保存形式。
+            save_file: True の場合はファイルへ保存する。
+            return_data: 互換性のための引数。取得結果は常に戻り値に含める。
+
+        Returns:
+            dict: 実行結果、保存ファイル名、取得フレームを含む。
+            bool: 測定に失敗した場合 False。
         """
-        pass
+        self._logger.info("== simple_int_acq()")
+
+        file_type_const = {
+            "PNG": self._pixet.PX_FTYPE_PNG,
+            "TPX3_PIXELS": self._pixet.PX_FTYPE_TPX3_PIXELS,
+            "BINARY_FRAME": self._pixet.PX_FTYPE_BINARY_FRAME,
+            "NONE": self._pixet.PX_FTYPE_NONE,
+            "AUTODETECT": self._pixet.PX_FTYPE_AUTODETECT,
+        }[file_type]
+
+        if save_file:
+            if file_type == "NONE":
+                output_name = ""
+            else:
+                output_name = name
+        else:
+            output_name = ""
+            file_type_const = self._pixet.PX_FTYPE_NONE
+
+        self._logger.info(f"file_type = {file_type}")
+        self._logger.info(f"output_name = {output_name}")
+        self._logger.info(f"count = {count}")
+        self._logger.info(f"sec = {sec}")
+        self._logger.info("")
+
+        self._logger.info(
+            f"dev.doSimpleIntegralAcquisition "
+            f"({count} frames @ {sec} sec) - start"
+        )
+        rc = self._dev.doSimpleIntegralAcquisition(
+            count,
+            sec,
+            file_type_const,
+            output_name,
+        )
+        self._logger.info(
+            f"dev.doSimpleIntegralAcquisition - end: {rc} (0 is OK)"
+        )
+
+        if rc != 0:
+            self._logger.error(
+                f"doSimpleIntegralAcquisition failed: "
+                f"rc={rc}, err={self._dev.lastError()}"
+            )
+            return False
+
+        result = {
+            "rc": int(rc),
+            "saved_file": output_name,
+        }
+        result.update(self.get_acq_frames())
+        return result
 
     def simple_acq(
         self,

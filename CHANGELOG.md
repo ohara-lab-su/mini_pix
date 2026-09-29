@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## v0.0.4
+
+### 追加
+
+- Integral 測定モードに対応しました。
+- Integral 測定用の `simple_int_acq()` を追加しました。
+- Integral 測定では Pixet API の `doSimpleIntegralAcquisition()` を使用し、複数フレームを1枚のフレームとして積算します。
+- Integral 測定用のサンプル `measure_integral.py` を追加しました。
+
+### 測定モード
+
+- `simple_acq()`：Pixet Pro の `Frames` に対応する通常のフレーム測定。
+- `simple_int_acq()`：Pixet Pro の `Integral` に対応する積算測定。
+
+
 ## v0.0.3 - 2026-09-29
 
 ### Changed
