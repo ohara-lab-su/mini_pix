@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 2026-09-29
+
+### Changed
+
+- `MiniPixCtrl.set_mode_all()` の指定名を PIXet Pro の GUI
+  `Detector Settings -> Mode` の表示に合わせた。
+  - `Counting` -> `PX_TPXMODE_MEDIPIX`
+  - `Energy` -> `PX_TPXMODE_TOT`
+  - `Time` -> `PX_TPXMODE_TIMEPIX`
+- `set_mode_all()` の引数を `Counting` / `Energy` / `Time` に統一し、
+  GUI に表示されない `ONEHIT` を公開指定から外した。
+- `set_mode_all()` の docstring と不正値時のエラーメッセージを、
+  上記の GUI 表記に合わせて更新した。
+- 実行例のモード指定を `ctrl.set_mode_all("Counting")` に変更した。
+
 ## v0.0.2
 
 ### 追加
