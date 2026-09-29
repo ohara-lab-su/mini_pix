@@ -3,31 +3,17 @@ from datetime import datetime
 from pathlib import Path
 
 import asyncio
-from mini_pix.server_grpc import AsyncPixetGrpcClient
-# from mini_pix.server_grpc import DeviceProxy
-
-# n# Detector settings
-# nMODE = "TOT"
-# n#THRESHOLD_KEV = 6.0
-# nTHRESHOLD_KEV = 5.0
-# n# BIAS_VOLT = 150.0
-# nBIAS_VOLT = 150.0
-# nCLOCK_MHZ = 9.66667
-# n
-# n# Measurement settings
-# nFRAME_COUNT = 1
-# n# EXPOSURE_SEC = 3.0
-# nEXPOSURE_SEC = 0.1
-# nOUTPUT_DIR = Path("measurement_output")
+# from mini_pix.server_grpc import AsyncPixetGrpcClient
+from mini_pix.server_grpc import DeviceProxy
 
 async def main() -> None:
-    client = AsyncPixetGrpcClient("10.170.10.38", 50051)
-    # client = DeviceProxy(
-    #     "mini_pix",
-    #     server_ip="10.170.10.38",
-    #     server_port=50051,
-    #     async_mode=True,
-    # )
+    # client = AsyncPixetGrpcClient("10.170.10.38", 50051)
+    client = DeviceProxy(
+        "mini_pix",
+        server_ip="10.170.10.38",
+        server_port=50051,
+        async_mode=True,
+    )
     await client.connect()
 
     # Energy: TOT
