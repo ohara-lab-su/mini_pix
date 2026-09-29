@@ -7,7 +7,7 @@ from mini_pix.server_grpc.sync_pixet_grpc_client import SyncPixetGrpcClient
 from mini_pix.server_grpc.pixet_grpc_server import pixet_grpc_server
 from mini_pix.server_grpc.pixet_grpc_server import pixet_server
 
-from grpc_frame import register_device_proxy
+from grpc_frame import DeviceProxy, register_device_proxy
 
 
 DEVICE_PROXY_NAME = "mini_pix"
@@ -31,6 +31,7 @@ register_device_proxy(
 __all__ = [
     "DEVICE_PROXY_NAME",
     "DEVICE_PROXY_ALIASES",
+    "DeviceProxy",
     "AsyncPixetGrpcClient",
     "SyncPixetGrpcClient",
     "pixet_grpc_server",

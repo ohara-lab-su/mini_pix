@@ -3,37 +3,28 @@
 """
 mini_pix.server_grpc の pyi 生成用 make_pyi.py である。
 
-このスクリプトは gRPC client の pyi と、DeviceProxy 登録層の pyi を生成する。
+このスクリプトは gRPC client の pyi のみを生成する。
 現状の二次元検出器制御は flat な server_grpc 構造であるため、clients/routers の
 サブディレクトリは前提にしない。
 
 生成対象:
 ・ sync_pixet_grpc_client.pyi
 ・ async_pixet_grpc_client.pyi
-・ __init__.py
-・ __init__.pyi
 
 方針:
 ・ gRPC client pyi は grpc_frame.make_pyi.generate_client_pyi を使う。
-・ DeviceProxy 用 __init__.pyi は grpc_frame の make_pyi_device_proxy を使う。
-・ DeviceProxy 登録用 __init__.py はこのスクリプトから生成する。
+・ __init__.py / __init__.pyi は公開 API の手書きファイルであり、生成・削除・上書きしない。
 ・ pixet_ctrl.py は制御本体であり、__init__.py には import しない。
 ・ client 側で実装されている simple_acq の上書きと補助メソッドは、生成 pyi 後に補正する。
 """
 
-import os
 import re
-from contextlib import contextmanager
 from pathlib import Path
 
 import grpc_frame
 from grpc_frame.make_pyi import generate_client_pyi
 
-from grpc_frame.make_pyi_device_proxy import make_pyi_device_proxy
 
-
-PACKAGE_NAME = "mini_pix"
-SERVER_GRPC_PACKAGE = "mini_pix.server_grpc"
 
 SYNC_CLIENT_PY = "sync_pixet_grpc_client.py"
 ASYNC_CLIENT_PY = "async_pixet_grpc_client.py"
@@ -41,30 +32,11 @@ CTRL_PY = "../pixet_ctrl.py"
 
 SYNC_CLIENT_PYI = "sync_pixet_grpc_client.pyi"
 ASYNC_CLIENT_PYI = "async_pixet_grpc_client.pyi"
-INIT_PY = "__init__.py"
-INIT_PYI = "__init__.pyi"
 
 CTRL_CLASS = "MiniPixCtrl"
 SYNC_CLIENT_CLASS = "SyncPixetGrpcClient"
 ASYNC_CLIENT_CLASS = "AsyncPixetGrpcClient"
 
-DEVICE_PROXY_NAME = "mini_pix"
-DEVICE_PROXY_ALIASES = [
-    "pixet",
-    "MiniPix",
-    "MiniPixCtrl",
-    "pixet_grpc",
-]
-
-
-@contextmanager
-def chdir(path):
-    prev_cwd = os.getcwd()
-    try:
-        os.chdir(path)
-        yield
-    finally:
-        os.chdir(prev_cwd)
 
 
 def _read_lines(filename):
@@ -241,7 +213,7 @@ def make_client_pyi():
         ctrl_async=False,
     )
     _patch_client_pyi(
-        filename=SYNC_CLIENT_PYI,
+        filename=base / SYNC_CLIENT_PYI,
         base_import_line=(
             "from mini_pix.server_grpc.async_pixet_grpc_client import "
             "AsyncPixetGrpcClient"
@@ -266,7 +238,7 @@ def make_client_pyi():
         ctrl_async=True,
     )
     _patch_client_pyi(
-        filename=ASYNC_CLIENT_PYI,
+        filename=base / ASYNC_CLIENT_PYI,
         base_import_line="from grpc_frame import AsyncGrpcClient",
         class_name=ASYNC_CLIENT_CLASS,
         base_class_name="AsyncGrpcClient",
@@ -287,75 +259,9 @@ def make_client_pyi():
     )
 
 
-def _write_init_py(filename):
-    aliases = "[\n" + "\n".join('    "{}",'.format(v) for v in DEVICE_PROXY_ALIASES) + "\n]"
-    text = '''#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""mini_pix.server_grpc の公開層と DeviceProxy 登録である。"""
-
-from mini_pix.server_grpc.async_pixet_grpc_client import AsyncPixetGrpcClient
-from mini_pix.server_grpc.sync_pixet_grpc_client import SyncPixetGrpcClient
-from mini_pix.server_grpc.pixet_grpc_server import pixet_grpc_server
-from mini_pix.server_grpc.pixet_grpc_server import pixet_server
-
-from grpc_frame import register_device_proxy
-
-
-DEVICE_PROXY_NAME = "{device_proxy_name}"
-DEVICE_PROXY_ALIASES = {aliases}
-
-
-register_device_proxy(
-    DEVICE_PROXY_NAME,
-    async_client_cls=AsyncPixetGrpcClient,
-    sync_client_cls=SyncPixetGrpcClient,
-    default_async_mode=False,
-    aliases=DEVICE_PROXY_ALIASES,
-)
-
-
-__all__ = [
-    "DEVICE_PROXY_NAME",
-    "DEVICE_PROXY_ALIASES",
-    "AsyncPixetGrpcClient",
-    "SyncPixetGrpcClient",
-    "pixet_grpc_server",
-    "pixet_server",
-]
-'''.format(device_proxy_name=DEVICE_PROXY_NAME, aliases=aliases)
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(text)
-
-
-def make_device_proxy_init_files():
-    _write_init_py(INIT_PY)
-
-    make_pyi_device_proxy(
-        filename=INIT_PYI,
-        import_lines=[
-            "from mini_pix.server_grpc.async_pixet_grpc_client import AsyncPixetGrpcClient",
-            "from mini_pix.server_grpc.sync_pixet_grpc_client import SyncPixetGrpcClient",
-            "from mini_pix.server_grpc.pixet_grpc_server import pixet_grpc_server, pixet_server",
-        ],
-        device_class=DEVICE_PROXY_NAME,
-        sync_client_class_name=SYNC_CLIENT_CLASS,
-        async_client_class_name=ASYNC_CLIENT_CLASS,
-        aliases=DEVICE_PROXY_ALIASES,
-        all_names=[
-            "DeviceProxy",
-            "DEVICE_PROXY_NAME",
-            "DEVICE_PROXY_ALIASES",
-            "AsyncPixetGrpcClient",
-            "SyncPixetGrpcClient",
-            "pixet_grpc_server",
-            "pixet_server",
-        ],
-    )
-
 
 def main():
     make_client_pyi()
-    make_device_proxy_init_files()
 
 
 if __name__ == "__main__":

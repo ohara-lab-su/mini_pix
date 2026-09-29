@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## v0.0.3 - 2026-09-29
+
+### Changed
+
+- `mini_pix.server_grpc` から `DeviceProxy` を直接 import できるように公開 API を修正した。
+  - `grpc_frame.DeviceProxy` を `mini_pix.server_grpc` で import。
+  - `DeviceProxy` を `__all__` に追加。
+  - `from mini_pix.server_grpc import DeviceProxy` を利用可能にした。
+
+- `make_pyi.py` の責務を gRPC client の stub 生成のみに整理した。
+  - 自動生成対象を `sync_pixet_grpc_client.pyi` と `async_pixet_grpc_client.pyi` に限定。
+  - 手書きの公開 API である `__init__.py` / `__init__.pyi` を自動生成対象から除外。
+  - `__init__.py` を再生成して既存の公開 API 定義を上書きする問題を修正。
+  - client 実装固有の `simple_acq` および補助メソッドについて、生成後の `.pyi` を補正する構成に整理。
+
+## 2026-09-29
+
+### Changed
+
+- `MiniPixCtrl.set_mode_all()` の指定名を PIXet Pro の GUI
+  `Detector Settings -> Mode` の表示に合わせた。
+  - `Counting` -> `PX_TPXMODE_MEDIPIX`
+  - `Energy` -> `PX_TPXMODE_TOT`
+  - `Time` -> `PX_TPXMODE_TIMEPIX`
+- `set_mode_all()` の引数を `Counting` / `Energy` / `Time` に統一し、
+  GUI に表示されない `ONEHIT` を公開指定から外した。
+- `set_mode_all()` の docstring と不正値時のエラーメッセージを、
+  上記の GUI 表記に合わせて更新した。
+- 実行例のモード指定を `ctrl.set_mode_all("Counting")` に変更した。
+
 ## v0.0.2
 
 ### 追加

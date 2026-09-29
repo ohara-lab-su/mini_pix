@@ -108,7 +108,7 @@ class MiniPixCtrl:
         # mode, mask, pixel ごとの threshoild correction
         self._pixcfg = self._dev.pixCfg()
 
-        # デフォルト設定: 全ビクセル
+        # デフォルト設定: GUI の「Counting」と同じモード
         rc = self._pixcfg.setModeAll(
             # DAC 一覧
             # 全pixelを ToT モードに設定
@@ -145,17 +145,29 @@ class MiniPixCtrl:
         self,
         mode: str,
     ) -> bool:
-        const_name = {
-            "COUNT": "PX_TPXMODE_MEDIPIX",
-            "TOT": "PX_TPXMODE_TOT",
-            "TOA": "PX_TPXMODE_TIMEPIX",
-            "ONEHIT": "PX_TPXMODE_1HIT",
-        }[mode]
+        """
+        GUI の Detector Settings -> Mode と同じ名称で全 pixel のモードを設定する。
 
-        pixet_const = getattr(
-            self._pixet,
-            const_name,
-        )
+        Args:
+            mode (str): "Counting", "Energy", "Time" のいずれか。
+
+        Returns:
+            bool: 設定に成功した場合 True。
+        """
+        mode_map = {
+            "Counting": self._pixet.PX_TPXMODE_MEDIPIX,
+            "Energy": self._pixet.PX_TPXMODE_TOT,
+            "Time": self._pixet.PX_TPXMODE_TIMEPIX,
+        }
+
+        if mode not in mode_map:
+            self._logger.error(
+                f"Invalid mode: {mode}. "
+                'Use "Counting", "Energy", or "Time".'
+            )
+            return False
+
+        pixet_const = mode_map[mode]
 
         rc = self._pixcfg.setModeAll(pixet_const)
         if rc != 0:
@@ -483,7 +495,7 @@ if __name__ == "__main__":
     ctrl = MiniPixCtrl(logger=logger_)
 
     ctrl.connect()
-    ctrl.set_mode_all("TOT")
+    ctrl.set_mode_all("Counting")
     # ctrl.set_threshold(1000)
     ctrl.set_threshold(6.0)
     ctrl.set_bias(150)  # V
