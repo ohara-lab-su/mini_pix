@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 """Start the MiniPIX gRPC device server."""
 
+from mini_pix.config import Config
 from mini_pix.server_grpc import pixet_grpc_server
 
 
-#GRPC_HOST = "0.0.0.0"
-GRPC_HOST = "10.170.10.38"
-GRPC_PORT = 50051
 AUTO_CONNECT = True
-LOG_LEVEL = "INFO"
 
 
 def main() -> None:
+    config = Config("mini_pix.yaml")
+
     pixet_grpc_server(
-        grpc_host=GRPC_HOST,
-        grpc_port=GRPC_PORT,
+        grpc_host=config.SERVER_IP,
+        grpc_port=config.SERVER_PORT,
         auto_connect=AUTO_CONNECT,
-        log_level=LOG_LEVEL,
+        log_level=config.LOGGER_LEVEL,
     )
 
 
