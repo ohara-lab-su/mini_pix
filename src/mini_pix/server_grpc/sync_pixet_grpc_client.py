@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Optional, Sequence, Tuple
 
 from grpc_frame import SyncGrpcClient
 from mini_pix.server_grpc.async_pixet_grpc_client import AsyncPixetGrpcClient
@@ -14,14 +14,26 @@ class SyncPixetGrpcClient(AsyncPixetGrpcClient, SyncGrpcClient):
         timeout_sec: Optional[float] = None,
         logger: Optional[Any] = None,
         log_level: Optional[str] = None,
+        grpc_options: Optional[Sequence[Tuple[str, Any]]] = None,
+        set_timeout_sec: Optional[float] = None,
     ) -> None:
+        if timeout_sec is not None and set_timeout_sec is not None:
+            raise ValueError(
+                "timeout_sec and set_timeout_sec cannot be specified together"
+            )
+
+        effective_timeout_sec = set_timeout_sec
+        if timeout_sec is not None:
+            effective_timeout_sec = timeout_sec
+
         SyncGrpcClient.__init__(
             self,
             server_ip=server_ip,
             server_port=server_port,
-            timeout_sec=timeout_sec,
+            timeout_sec=effective_timeout_sec,
             logger=logger,
             log_level=log_level,
+            grpc_options=grpc_options,
         )
 
         self._grpc_simple_acq = self.simple_acq
