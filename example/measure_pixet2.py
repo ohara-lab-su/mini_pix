@@ -10,19 +10,23 @@ from x_logger import XLogger
 
 
 # gRPC server
-SERVER_IP = "127.0.0.1"
+#SERVER_IP = "127.0.0.1"
+SERVER_IP = "10.170.10.38"
 SERVER_PORT = 50051
 TIMEOUT_SEC = 30.0
 
 # Detector settings
 MODE = "TOT"
-THRESHOLD_KEV = 6.0
+#THRESHOLD_KEV = 6.0
+THRESHOLD_KEV = 5.0
+# BIAS_VOLT = 150.0
 BIAS_VOLT = 150.0
 CLOCK_MHZ = 9.66667
 
 # Measurement settings
 FRAME_COUNT = 1
-EXPOSURE_SEC = 3.0
+# EXPOSURE_SEC = 3.0
+EXPOSURE_SEC = 0.1
 OUTPUT_DIR = Path("measurement_output")
 
 
