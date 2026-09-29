@@ -4,22 +4,25 @@ from pathlib import Path
 
 import asyncio
 # from mini_pix.server_grpc import AsyncPixetGrpcClient
+from mini_pix.config import Config
 from mini_pix.server_grpc import DeviceProxy
 from x_logger import XLogger
 
 async def main() -> None:
+    config = Config("mini_pix.yaml")
+
     logger = XLogger(
-        log_level="INFO",
-        logger_name="MiniPixMeasurementClient",
+        log_level=config.LOGGER_LEVEL,
+        logger_name=config.CLIENT_LOGGER_NAME,
     )
 
     # client = AsyncPixetGrpcClient("10.170.10.38", 50051)
     client = DeviceProxy(
         "mini_pix",
-        server_ip="10.170.10.38",
-        server_port=50051,
-        set_timeout_sec=30.0,
-        async_mode=True,
+        server_ip=config.SERVER_IP,
+        server_port=config.SERVER_PORT,
+        set_timeout_sec=config.TIMEOUT,
+        async_mode=config.ASYNC_MODE,
     )
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     OUTPUT_DIR = Path("measurement_output")
