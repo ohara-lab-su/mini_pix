@@ -7,6 +7,7 @@ import grpc
 from grpc import channel_ready_future
 
 from grpc_frame.grpc_server import create_grpc_server
+from mini_pix.config import Config
 from mini_pix.pixet_ctrl import MiniPixCtrl
 from x_logger import XLogger
 
@@ -76,18 +77,16 @@ pixet_server = pixet_grpc_server
 
 
 if __name__ == "__main__":
-    GRPC_HOST = "127.0.0.1"
-    GRPC_PORT = 50051
-    LOG_LEVEL = "INFO"
+    config = Config("mini_pix.yaml")
 
     logger_ = XLogger(
-        log_level=LOG_LEVEL,
-        logger_name="MiniPixGrpcServer",
+        log_level=config.LOGGER_LEVEL,
+        logger_name=config.SERVER_LOGGER_NAME,
     )
 
     pixet_grpc_server(
-        grpc_host=GRPC_HOST,
-        grpc_port=GRPC_PORT,
+        grpc_host=config.SERVER_IP,
+        grpc_port=config.SERVER_PORT,
         logger=logger_,
-        log_level=LOG_LEVEL,
+        log_level=config.LOGGER_LEVEL,
     )

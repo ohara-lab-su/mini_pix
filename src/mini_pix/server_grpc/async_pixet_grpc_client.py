@@ -210,19 +210,23 @@ class AsyncPixetGrpcClient(AsyncGrpcClient):
 if __name__ == "__main__":
     import asyncio
 
+    from mini_pix.config import Config
     from x_logger import XLogger
 
     async def main() -> None:
+        config = Config("mini_pix.yaml")
+
         logger_ = XLogger(
-            log_level="INFO",
-            logger_name="AsyncPixetGrpcClient",
+            log_level=config.LOGGER_LEVEL,
+            logger_name=config.CLIENT_LOGGER_NAME,
         )
 
         client = AsyncPixetGrpcClient(
-            server_ip="127.0.0.1",
-            server_port=50051,
+            server_ip=config.SERVER_IP,
+            server_port=config.SERVER_PORT,
+            set_timeout_sec=config.TIMEOUT,
             logger=logger_,
-            log_level="INFO",
+            log_level=config.LOGGER_LEVEL,
         )
 
         try:
