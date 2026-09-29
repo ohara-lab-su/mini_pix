@@ -33,7 +33,7 @@ async def main() -> None:
     # Energy: TOT
     # Counting: COUNT
     # Time: TOA
-    await client.set_mode_all("TOT")
+    await client.set_mode_all("Energy")
     await client.set_threshold(5.0)  # keV
     await client.set_bias(150) # V
     await client.set_clock(9.66667) # MHz
