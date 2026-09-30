@@ -68,10 +68,10 @@ pixcfg.setModeAll(
     pixet.PX_TPXMODE_MEDIPIX,
 )
 
-TIME = 0.1
+TIME = 1
 COUNT = 100
 
-THRESHOLD = 5.0
+THRESHOLD = 2.4
 BIAS = 150.0
 CLOCK = 9.66667
 
