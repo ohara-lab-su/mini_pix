@@ -9,7 +9,8 @@ site.addsitedir(pixet_dir)
 
 import pypixet
 import numpy as np
-import pyqtgraph as pg
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -88,24 +89,23 @@ settings_label = QLabel(
     f"Clock: {CLOCK} MHz"
 )
 
-image_view = pg.ImageView(
-    view=pg.PlotItem(
-        labels={
-            "bottom": ("X", "pixel"),
-            "left": ("Y", "pixel"),
-        }
-    )
-)
-image_view.setMinimumSize(768, 768)
-image_view.getView().setAspectLocked(True)
-image_view.getView().invertY(True)
+figure = Figure(figsize=(7.68, 7.68), dpi=100)
+figure.subplots_adjust(left=0, right=1, bottom=0, top=1)
+
+image_canvas = FigureCanvasQTAgg(figure)
+image_canvas.setFixedSize(768, 768)
+
+image_axes = figure.add_subplot(111)
+image_axes.set_axis_off()
+
+image_plot = None
 
 status_label = QLabel("Ready")
 
 start_button = QPushButton("Start")
 
 layout.addWidget(settings_label)
-layout.addWidget(image_view)
+layout.addWidget(image_canvas)
 layout.addWidget(status_label)
 layout.addWidget(start_button)
 
@@ -120,15 +120,25 @@ last_data = None
 
 
 def show_image():
+    global image_plot
+
     if last_data is None:
         return
 
-    image_view.setImage(
-        last_data,
-        autoRange=False,
-        autoLevels=False,
-        autoHistogramRange=False,
-    )
+    if image_plot is None:
+        image_plot = image_axes.imshow(
+            last_data,
+            cmap="gray",
+            vmin=0,
+            vmax=6,
+            interpolation="nearest",
+            origin="upper",
+        )
+    else:
+        image_plot.set_data(last_data)
+        image_plot.set_clim(0, 6)
+
+    image_canvas.draw_idle()
 
 
 # ------------------------------------------------------------
@@ -150,9 +160,7 @@ def acquire():
 
     if rc != 0:
         start_button.setEnabled(True)
-        status_label.setText(
-            "Acquisition error: " + str(rc)
-        )
+        status_label.setText("Acquisition error: " + str(rc))
         return
 
     frame_count = dev.acqFrameCount()
@@ -161,13 +169,31 @@ def acquire():
         frame = dev.acqFrameRefInc(frame_number)
 
         try:
-            data = np.array(frame.data())
-            data = data.reshape(256, 256)
-            last_data = data.copy()
+            data = np.asarray(frame.data()).reshape(256, 256)
+
+            # 生データをそのまま保持する。値変換は一切しない。
+            last_data = data
 
             minimum = data.min()
             maximum = data.max()
             nonzero = np.count_nonzero(data)
+
+            print(
+                "Frame",
+                frame_number + 1,
+                "/",
+                frame_count,
+                "dtype",
+                data.dtype,
+                "shape",
+                data.shape,
+                "min",
+                minimum,
+                "max",
+                maximum,
+                "nonzero",
+                nonzero,
+            )
 
             show_image()
             QApplication.processEvents()
@@ -177,23 +203,14 @@ def acquire():
                 + str(frame_number + 1)
                 + " / "
                 + str(frame_count)
+                + "    dtype: "
+                + str(data.dtype)
                 + "    Min: "
                 + str(minimum)
                 + "    Max: "
                 + str(maximum)
                 + "    Non-zero: "
                 + str(nonzero)
-            )
-
-            print(
-                "Frame",
-                frame_number + 1,
-                "min",
-                minimum,
-                "max",
-                maximum,
-                "nonzero",
-                nonzero,
             )
 
         finally:
