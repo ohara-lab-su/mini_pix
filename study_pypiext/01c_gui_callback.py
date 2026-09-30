@@ -1,8 +1,8 @@
 """
 MiniPIX callback acquisition GUI test.
 
-01b_gui.py と同じ簡易GUI構成で、
-1回の doSimpleAcquisition(100, 0.1, PX_FTYPE_NONE, "") に対して
+01b_gui_memory.py と同じ測定パラメーター構成で、
+1回の doSimpleAcquisition(COUNT, TIME, PX_FTYPE_NONE, "") に対して
 PX_EVENT_ACQ_FINISHED callback で各フレームを受け取り、GUI表示する。
 """
 
@@ -68,14 +68,21 @@ pixcfg.setModeAll(
     pixet.PX_TPXMODE_MEDIPIX,
 )
 
+TIME = 0.1
+COUNT = 100
+
+THRESHOLD = 5.0
+BIAS = 150.0
+CLOCK = 9.66667
+
 dev.setThreshold(
     0,
-    5.0,
+    THRESHOLD,
     pixet.PX_THLFLG_ENERGY,
 )
 
-dev.setBias(150.0)
-dev.setTimepixClock(9.66667)
+dev.setBias(BIAS)
+dev.setTimepixClock(CLOCK)
 
 
 # ==========================================================
@@ -132,11 +139,16 @@ def acquisition_worker():
     )
 
     try:
-        print("doSimpleAcquisition(100, 0.1, PX_FTYPE_NONE, '') - start")
+        print(
+            "doSimpleAcquisition({}, {}, PX_FTYPE_NONE, '') - start".format(
+                COUNT,
+                TIME,
+            )
+        )
 
         acq_rc = dev.doSimpleAcquisition(
-            100,
-            0.1,
+            COUNT,
+            TIME,
             pixet.PX_FTYPE_NONE,
             "",
         )
@@ -164,7 +176,7 @@ def acquisition_worker():
 app = QApplication(sys.argv)
 
 window = QMainWindow()
-window.setWindowTitle("MiniPIX 01c callback GUI")
+window.setWindowTitle("MiniPIX 01c GUI Callback")
 
 central = QWidget()
 layout = QVBoxLayout(central)
@@ -267,14 +279,15 @@ def update_gui():
         draw_frame()
 
         status_label.setText(
-            "Frame: {}/100".format(last_frame_number)
+            "Frame: {}/{}".format(last_frame_number, COUNT)
         )
 
     if acq_finished:
         if frame_queue.empty():
             status_label.setText(
-                "Finished: {}/100 frames, rc={}".format(
+                "Finished: {}/{} frames, rc={}".format(
                     last_frame_number,
+                    COUNT,
                     acq_rc,
                 )
             )
