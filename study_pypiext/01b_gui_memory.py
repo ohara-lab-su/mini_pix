@@ -10,7 +10,7 @@ site.addsitedir(pixet_dir)
 import pypixet
 import numpy as np
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
@@ -184,13 +184,6 @@ def acquire():
     global frame_number
     global last_data
 
-    if frame_number >= 100:
-        start_button.setEnabled(True)
-        status_label.setText(
-            "Finished - last frame remains displayed"
-        )
-        return
-
     ###################################
     rc = dev.doSimpleAcquisition(
         COUNT,
@@ -258,7 +251,7 @@ def acquire():
 
     frame.destroy()
 
-    QTimer.singleShot(0, acquire)
+    start_button.setEnabled(True)
 
 
 def start():
