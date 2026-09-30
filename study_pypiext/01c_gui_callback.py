@@ -10,17 +10,13 @@ site.addsitedir(pixet_dir)
 
 import pypixet
 import numpy as np
-
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
-from matplotlib.colors import PowerNorm
+import pyqtgraph as pg
 
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
     QPushButton,
-    QSlider,
     QHBoxLayout,
     QVBoxLayout,
     QWidget,
@@ -93,37 +89,25 @@ settings_label = QLabel(
     f"Clock: {CLOCK} MHz"
 )
 
-figure = Figure(figsize=(7.68, 7.68), dpi=100)
-figure.subplots_adjust(left=0, right=1, bottom=0, top=1)
-
-image_canvas = FigureCanvasQTAgg(figure)
-image_canvas.setFixedSize(768, 768)
-
-image_axes = figure.add_subplot(111)
-image_axes.set_axis_off()
-
-image_plot = None
+image_view = pg.ImageView(
+    view=pg.PlotItem(
+        labels={
+            "bottom": ("X", "pixel"),
+            "left": ("Y", "pixel"),
+        }
+    )
+)
+image_view.setMinimumSize(768, 768)
+image_view.getView().setAspectLocked(True)
+image_view.getView().invertY(True)
 
 status_label = QLabel("Ready")
-
-range_layout = QHBoxLayout()
-
-range_label = QLabel("View Max: 1")
-
-range_slider = QSlider(Qt.Horizontal)
-range_slider.setMinimum(1)
-range_slider.setMaximum(100)
-range_slider.setValue(1)
-
-range_layout.addWidget(range_label)
-range_layout.addWidget(range_slider)
 
 start_button = QPushButton("Start")
 
 layout.addWidget(settings_label)
-layout.addWidget(image_canvas)
+layout.addWidget(image_view)
 layout.addWidget(status_label)
-layout.addLayout(range_layout)
 layout.addWidget(start_button)
 
 window.show()
@@ -137,49 +121,15 @@ last_data = None
 
 
 def show_image():
-    global image_plot
-
     if last_data is None:
         return
 
-    view_max = range_slider.value()
-
-    if image_plot is None:
-        image_plot = image_axes.imshow(
-            last_data,
-            cmap="gray",
-            norm=PowerNorm(
-                gamma=1.0,
-                vmin=0,
-                vmax=view_max,
-                clip=True,
-            ),
-            interpolation="nearest",
-            origin="upper",
-        )
-    else:
-        image_plot.set_data(last_data)
-        image_plot.set_norm(
-            PowerNorm(
-                gamma=1.0,
-                vmin=0,
-                vmax=view_max,
-                clip=True,
-            )
-        )
-
-    image_canvas.draw_idle()
-
-    range_label.setText(
-        "View Max: " + str(view_max)
+    image_view.setImage(
+        last_data,
+        autoRange=False,
+        autoLevels=False,
+        autoHistogramRange=False,
     )
-
-
-def range_changed():
-    show_image()
-
-
-range_slider.valueChanged.connect(range_changed)
 
 
 # ------------------------------------------------------------
@@ -291,8 +241,6 @@ def update_gui():
         if slider_max < 10:
             slider_max = 10
 
-        if slider_max > range_slider.maximum():
-            range_slider.setMaximum(slider_max)
 
         show_image()
 
