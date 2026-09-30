@@ -14,8 +14,6 @@ files = [
 
 images = []
 
-print("=== 各画像 ===")
-
 for path in files:
     image = np.array(Image.open(path))
 
@@ -24,70 +22,55 @@ for path in files:
 
     images.append(image)
 
-    positions = np.argwhere(image != 0)
 
-    print()
-    print(path.name)
-    print("  dtype   :", image.dtype)
-    print("  min     :", image.min())
-    print("  max     :", image.max())
-    print("  sum     :", image.sum())
-    print("  nonzero :", len(positions))
+# 5回すべてで光っている画素
+# → 常時点灯している固定画素として今回の比較から除外
+always_on = np.ones(images[0].shape, dtype=bool)
+
+for image in images:
+    always_on &= image != 0
+
+
+print("=== 固定画素 ===")
+print("5回すべてで点灯:", np.count_nonzero(always_on))
+
+for y, x in np.argwhere(always_on):
+    print(f"  x={x:3d}, y={y:3d}")
 
 
 print()
-print("=== 画像間の非ゼロ画素の重複 ===")
+print("=== X線イベント候補 ===")
+
+event_masks = []
+
+for i, image in enumerate(images):
+    # 光っている画素から固定画素を除外
+    event_mask = (image != 0) & ~always_on
+    event_masks.append(event_mask)
+
+    positions = np.argwhere(event_mask)
+
+    print()
+    print(files[i].name)
+    print("  event pixels:", len(positions))
+
+    for y, x in positions:
+        print(
+            f"  x={x:3d}, y={y:3d}, "
+            f"value={image[y, x]}"
+        )
+
+
+print()
+print("=== 測定ごとのX線イベント位置の比較 ===")
 
 for i in range(5):
-    mask_i = images[i] != 0
-
     for j in range(i + 1, 5):
-        mask_j = images[j] != 0
-
-        intersection = np.count_nonzero(mask_i & mask_j)
-        union = np.count_nonzero(mask_i | mask_j)
-
-        if union == 0:
-            jaccard = 0.0
-        else:
-            jaccard = intersection / union
+        common = np.count_nonzero(
+            event_masks[i] & event_masks[j]
+        )
 
         print(
             f"{files[i].name} vs {files[j].name}: "
-            f"共通={intersection}, "
-            f"Jaccard={jaccard:.6f}"
+            f"共通イベント画素={common}"
         )
-
-
-print()
-print("=== 同じ座標が何回出現したか ===")
-
-hit_count = np.zeros(images[0].shape, dtype=np.uint8)
-
-for image in images:
-    hit_count += image != 0
-
-for count in range(5, 1, -1):
-    positions = np.argwhere(hit_count == count)
-
-    print()
-    print(f"{count} / 5 回出現: {len(positions)} pixels")
-
-    for y, x in positions:
-        values = []
-
-        for image in images:
-            values.append(int(image[y, x]))
-
-        print(
-            f"  x={x:3d}, y={y:3d}, "
-            f"values={values}"
-        )
-
-
-print()
-print("=== 出現回数の集計 ===")
-
-for count in range(1, 6):
-    n = np.count_nonzero(hit_count == count)
-    print(f"{count}回だけ/以上ではなく、正確に{count}回出現: {n} pixels")
