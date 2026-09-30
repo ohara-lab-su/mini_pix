@@ -1,6 +1,7 @@
 import os
 import site
 import sys
+import threading
 
 pixet_dir = r"C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64"
 
@@ -178,11 +179,23 @@ range_slider.valueChanged.connect(range_changed)
 # ------------------------------------------------------------
 
 frame_number = 0
+latest_frame_number = 0
+latest_minimum = 0
+latest_maximum = 0
+latest_nonzero = 0
+acquisition_running = False
+acquisition_finished = False
+acquisition_rc = None
+data_lock = threading.Lock()
 
 
 def callback_acq_finished(cnt):
     global frame_number
     global last_data
+    global latest_frame_number
+    global latest_minimum
+    global latest_maximum
+    global latest_nonzero
 
     frame = dev.lastAcqFrameRefInc()
 
@@ -193,37 +206,20 @@ def callback_acq_finished(cnt):
     try:
         data = np.array(frame.data())
         data = data.reshape(256, 256)
-
-        last_data = data.copy()
+        data = data.copy()
 
         minimum = data.min()
         maximum = data.max()
         nonzero = np.count_nonzero(data)
 
-        slider_max = int(maximum)
-
-        if slider_max < 10:
-            slider_max = 10
-
-        if slider_max > range_slider.maximum():
-            range_slider.setMaximum(slider_max)
-
         frame_number += 1
 
-        show_image()
-
-        status_label.setText(
-            "Frame: "
-            + str(frame_number)
-            + " / "
-            + str(COUNT)
-            + "    Min: "
-            + str(minimum)
-            + "    Max: "
-            + str(maximum)
-            + "    Non-zero: "
-            + str(nonzero)
-        )
+        with data_lock:
+            last_data = data
+            latest_frame_number = frame_number
+            latest_minimum = minimum
+            latest_maximum = maximum
+            latest_nonzero = nonzero
 
         print(
             "Callback",
@@ -238,19 +234,14 @@ def callback_acq_finished(cnt):
             nonzero,
         )
 
-        app.processEvents()
-
     finally:
         frame.destroy()
 
 
-def start():
-    global frame_number
-
-    frame_number = 0
-
-    start_button.setEnabled(False)
-    status_label.setText("Acquiring...")
+def acquisition_worker():
+    global acquisition_running
+    global acquisition_finished
+    global acquisition_rc
 
     dev.registerEvent(
         pixet.PX_EVENT_ACQ_FINISHED,
@@ -259,7 +250,7 @@ def start():
     )
 
     try:
-        rc = dev.doSimpleAcquisition(
+        acquisition_rc = dev.doSimpleAcquisition(
             COUNT,
             TIME,
             pixet.PX_FTYPE_NONE,
@@ -272,21 +263,97 @@ def start():
             callback_acq_finished,
         )
 
-    if rc != 0:
+        acquisition_running = False
+        acquisition_finished = True
+
+
+def update_gui():
+    global acquisition_finished
+
+    with data_lock:
+        data = last_data
+        current_frame_number = latest_frame_number
+        minimum = latest_minimum
+        maximum = latest_maximum
+        nonzero = latest_nonzero
+
+    if data is not None:
+        slider_max = int(maximum)
+
+        if slider_max < 10:
+            slider_max = 10
+
+        if slider_max > range_slider.maximum():
+            range_slider.setMaximum(slider_max)
+
+        show_image()
+
         status_label.setText(
-            "Acquisition error: " + str(rc)
-        )
-    else:
-        status_label.setText(
-            "Finished - "
-            + str(frame_number)
-            + " frames"
+            "Frame: "
+            + str(current_frame_number)
+            + " / "
+            + str(COUNT)
+            + "    Min: "
+            + str(minimum)
+            + "    Max: "
+            + str(maximum)
+            + "    Non-zero: "
+            + str(nonzero)
         )
 
-    start_button.setEnabled(True)
+    if acquisition_finished:
+        acquisition_finished = False
+
+        if acquisition_rc != 0:
+            status_label.setText(
+                "Acquisition error: " + str(acquisition_rc)
+            )
+        else:
+            status_label.setText(
+                "Finished - "
+                + str(current_frame_number)
+                + " frames"
+            )
+
+        start_button.setEnabled(True)
+
+
+def start():
+    global frame_number
+    global last_data
+    global latest_frame_number
+    global acquisition_running
+    global acquisition_finished
+    global acquisition_rc
+
+    if acquisition_running:
+        return
+
+    frame_number = 0
+    latest_frame_number = 0
+    acquisition_finished = False
+    acquisition_rc = None
+
+    with data_lock:
+        last_data = None
+
+    start_button.setEnabled(False)
+    status_label.setText("Acquiring...")
+
+    acquisition_running = True
+
+    worker = threading.Thread(
+        target=acquisition_worker,
+        daemon=True,
+    )
+    worker.start()
 
 
 start_button.clicked.connect(start)
+
+timer = QTimer()
+timer.timeout.connect(update_gui)
+timer.start(20)
 
 
 # ------------------------------------------------------------
