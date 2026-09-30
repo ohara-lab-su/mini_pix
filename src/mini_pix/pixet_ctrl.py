@@ -16,7 +16,15 @@ import pypixet
 
 class MiniPixCtrl:
     """
-    今基本的には MPX2 相当で作っている
+    混乱するハードウエアの違い
+
+    ASIC Timepix  --> (MPX2) IDevMpx2
+         TimePix2 --> (TPX2) Timepix2
+         TimePix3 --> (TPX3) IDevTpx3 / Timepix3
+
+    今基本的には MPX2 (Timepix) 相当で作っている
+
+    D08-W0313 (島根2025.04-)
     """
 
     def __init__(
