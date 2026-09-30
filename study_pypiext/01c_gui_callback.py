@@ -49,7 +49,7 @@ pixcfg = dev.pixCfg()
 pixcfg.setModeAll(pixet.PX_TPXMODE_MEDIPIX)
 
 TIME = 1
-COUNT = 100
+COUNT = 1
 
 THRESHOLD = 2.4
 BIAS = 150.0
