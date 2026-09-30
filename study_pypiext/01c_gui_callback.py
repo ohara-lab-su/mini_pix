@@ -1,45 +1,27 @@
-"""
-MiniPIX callback acquisition GUI test.
-
-01b_gui_memory.py と同じ測定パラメーター構成で、
-1回の doSimpleAcquisition(COUNT, TIME, PX_FTYPE_NONE, "") に対して
-PX_EVENT_ACQ_FINISHED callback で各フレームを受け取り、GUI表示する。
-"""
-
-######################################################
 import os
 import site
 import sys
-import threading
-import queue
 
 pixet_dir = r"C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64"
 
-# Python 3.7 では add_dll_directory は使えないため PATH を変更
 os.environ["PATH"] = pixet_dir + ";" + os.environ["PATH"]
 site.addsitedir(pixet_dir)
-######################################################
 
-import numpy as np
 import pypixet
+import numpy as np
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
-    QMainWindow,
+    QPushButton,
     QSlider,
+    QHBoxLayout,
     QVBoxLayout,
     QWidget,
 )
 
-
-# ==========================================================
-# PIXet Core / MiniPIX 初期化
-# ==========================================================
-
-print("pixet core init...")
 
 pypixet.start()
 pixet = pypixet.pixet
@@ -47,26 +29,23 @@ pixet = pypixet.pixet
 devices = pixet.devices()
 
 if len(devices) == 0:
+    print("No devices found")
     pypixet.exit()
-    raise RuntimeError("No devices found")
+    sys.exit(1)
 
 dev = devices[0]
 
-print("device:")
-print("  fullName :", dev.fullName())
-print("  deviceType:", dev.deviceType())
-print("  chipType  :", dev.chipType())
+print("Device:", dev.fullName())
 
 
-# ==========================================================
-# Timepix 設定
-# ==========================================================
+# ------------------------------------------------------------
+# GUI と同じ設定
+# ------------------------------------------------------------
 
 pixcfg = dev.pixCfg()
 
-pixcfg.setModeAll(
-    pixet.PX_TPXMODE_MEDIPIX,
-)
+# Counting
+pixcfg.setModeAll(pixet.PX_TPXMODE_MEDIPIX)
 
 TIME = 1
 COUNT = 100
@@ -85,50 +64,166 @@ dev.setBias(BIAS)
 dev.setTimepixClock(CLOCK)
 
 
-# ==========================================================
-# callback -> GUI 間の受け渡し
-# ==========================================================
+# ------------------------------------------------------------
+# Qt
+# ------------------------------------------------------------
 
-frame_queue = queue.Queue()
+app = QApplication(sys.argv)
 
-acq_finished = False
-acq_rc = None
-received_count = 0
+window = QWidget()
+window.setWindowTitle("MiniPIX callback")
 
+layout = QVBoxLayout(window)
+
+settings_label = QLabel(
+    f"Type: Frames    "
+    "Mode: Counting   "
+    f"Count: {COUNT}  "
+    f"Time: {TIME} s\n"
+    f"Threshold: {THRESHOLD} keV    "
+    f"Bias: {BIAS} V    "
+    f"Clock: {CLOCK} MHz"
+)
+
+image_label = QLabel()
+image_label.setFixedSize(768, 768)
+image_label.setAlignment(Qt.AlignCenter)
+
+status_label = QLabel("Ready")
+
+range_layout = QHBoxLayout()
+
+range_label = QLabel("View Max: 1")
+
+range_slider = QSlider(Qt.Horizontal)
+range_slider.setMinimum(1)
+range_slider.setMaximum(100)
+range_slider.setValue(1)
+
+range_layout.addWidget(range_label)
+range_layout.addWidget(range_slider)
+
+start_button = QPushButton("Start")
+
+layout.addWidget(settings_label)
+layout.addWidget(image_label)
+layout.addWidget(status_label)
+layout.addLayout(range_layout)
+layout.addWidget(start_button)
+
+window.show()
+
+
+# ------------------------------------------------------------
+# 表示
+# ------------------------------------------------------------
+
+last_data = None
+frame_number = 0
+
+
+def show_image():
+    if last_data is None:
+        return
+
+    view_max = range_slider.value()
+
+    display = last_data.astype(np.float64).copy()
+
+    display[display < 0] = 0
+    display[display > view_max] = view_max
+
+    display = (
+        display
+        / float(view_max)
+        * 255.0
+    ).astype(np.uint8)
+
+    image = QImage(
+        display.data,
+        256,
+        256,
+        display.strides[0],
+        QImage.Format_Grayscale8,
+    ).copy()
+
+    pixmap = QPixmap.fromImage(image)
+
+    pixmap = pixmap.scaled(
+        image_label.width(),
+        image_label.height(),
+        Qt.KeepAspectRatio,
+        Qt.FastTransformation,
+    )
+
+    image_label.setPixmap(pixmap)
+
+    range_label.setText(
+        "View Max: " + str(view_max)
+    )
+
+
+def range_changed():
+    show_image()
+
+
+range_slider.valueChanged.connect(range_changed)
+
+
+# ------------------------------------------------------------
+# Callback
+# ------------------------------------------------------------
 
 def callback_acq_finished(cnt):
-    """
-    1フレームの acquisition 完了ごとに PIXet Core から呼ばれる。
-
-    callback 内では GUI を直接操作せず、
-    最新フレームをコピーして queue に渡すだけにする。
-    """
-    global received_count
+    global frame_number
+    global last_data
 
     frame = dev.lastAcqFrameRefInc()
 
     if frame is None:
+        print("callback: frame is None")
         return
 
     try:
-        data = np.array(
-            frame.data(),
-            dtype=np.float64,
-            copy=True,
-        ).reshape(256, 256)
+        data = np.array(frame.data())
+        data = data.reshape(256, 256)
+
+        last_data = data.copy()
+
+        minimum = data.min()
+        maximum = data.max()
+        nonzero = np.count_nonzero(data)
+
+        frame_number += 1
+
+        print(
+            "Callback",
+            frame_number,
+            "cnt",
+            cnt,
+            "min",
+            minimum,
+            "max",
+            maximum,
+            "nonzero",
+            nonzero,
+        )
+
     finally:
         frame.destroy()
 
-    received_count += 1
-    frame_queue.put((received_count, data))
 
+# ------------------------------------------------------------
+# Acquisition
+# ------------------------------------------------------------
 
-def acquisition_worker():
-    """
-    PIXet の blocking acquisition を GUI スレッドとは別に実行する。
-    """
-    global acq_finished
-    global acq_rc
+def start():
+    global frame_number
+
+    frame_number = 0
+
+    start_button.setEnabled(False)
+    status_label.setText("Acquiring...")
 
     print("register PX_EVENT_ACQ_FINISHED")
 
@@ -146,7 +241,7 @@ def acquisition_worker():
             )
         )
 
-        acq_rc = dev.doSimpleAcquisition(
+        rc = dev.doSimpleAcquisition(
             COUNT,
             TIME,
             pixet.PX_FTYPE_NONE,
@@ -155,8 +250,7 @@ def acquisition_worker():
 
         print(
             "doSimpleAcquisition - end:",
-            acq_rc,
-            "(0 is OK)",
+            rc,
         )
 
     finally:
@@ -166,160 +260,39 @@ def acquisition_worker():
             callback_acq_finished,
         )
 
-        acq_finished = True
+    if last_data is not None:
+        maximum = last_data.max()
 
+        slider_max = int(maximum)
 
-# ==========================================================
-# Qt GUI
-# ==========================================================
+        if slider_max < 10:
+            slider_max = 10
 
-app = QApplication(sys.argv)
+        if slider_max > range_slider.maximum():
+            range_slider.setMaximum(slider_max)
 
-window = QMainWindow()
-window.setWindowTitle("MiniPIX 01c GUI Callback")
+        show_image()
 
-central = QWidget()
-layout = QVBoxLayout(central)
-
-image_label = QLabel()
-image_label.setAlignment(Qt.AlignCenter)
-image_label.setMinimumSize(512, 512)
-
-status_label = QLabel("Waiting for acquisition...")
-
-view_max_label = QLabel("View Max: 10")
-
-view_max_slider = QSlider(Qt.Horizontal)
-view_max_slider.setMinimum(1)
-view_max_slider.setMaximum(255)
-view_max_slider.setValue(10)
-
-layout.addWidget(image_label)
-layout.addWidget(status_label)
-layout.addWidget(view_max_label)
-layout.addWidget(view_max_slider)
-
-window.setCentralWidget(central)
-window.resize(620, 700)
-
-last_data = None
-last_frame_number = 0
-
-
-def draw_frame():
-    """
-    最後に受信したフレームを現在の View Max で描画する。
-    """
-    if last_data is None:
-        return
-
-    view_max = view_max_slider.value()
-
-    display = last_data.astype(np.float64).copy()
-
-    display[display < 0] = 0
-    display[display > view_max] = view_max
-
-    display = (
-        display / float(view_max) * 255.0
-    ).astype(np.uint8)
-
-    display = np.ascontiguousarray(display)
-
-    height, width = display.shape
-
-    image = QImage(
-        display.data,
-        width,
-        height,
-        display.strides[0],
-        QImage.Format_Grayscale8,
-    ).copy()
-
-    pixmap = QPixmap.fromImage(image)
-    pixmap = pixmap.scaled(
-        512,
-        512,
-        Qt.KeepAspectRatio,
-        Qt.FastTransformation,
+    status_label.setText(
+        "Finished: "
+        + str(frame_number)
+        + " / "
+        + str(COUNT)
+        + "    rc="
+        + str(rc)
     )
 
-    image_label.setPixmap(pixmap)
+    start_button.setEnabled(True)
 
 
-def update_view_max(value):
-    view_max_label.setText(
-        "View Max: {}".format(value)
-    )
-    draw_frame()
+start_button.clicked.connect(start)
 
 
-def update_gui():
-    """
-    callback が queue に入れたフレームを Qt メインスレッドで表示する。
-
-    GUI が一時的に遅れても、queue 内のフレームは順番に保持される。
-    """
-    global last_data
-    global last_frame_number
-
-    updated = False
-
-    while True:
-        try:
-            frame_number, data = frame_queue.get_nowait()
-        except queue.Empty:
-            break
-
-        last_frame_number = frame_number
-        last_data = data
-        updated = True
-
-    if updated:
-        draw_frame()
-
-        status_label.setText(
-            "Frame: {}/{}".format(last_frame_number, COUNT)
-        )
-
-    if acq_finished:
-        if frame_queue.empty():
-            status_label.setText(
-                "Finished: {}/{} frames, rc={}".format(
-                    last_frame_number,
-                    COUNT,
-                    acq_rc,
-                )
-            )
-
-
-view_max_slider.valueChanged.connect(update_view_max)
-
-timer = QTimer()
-timer.timeout.connect(update_gui)
-timer.start(20)
-
-window.show()
-
-
-# ==========================================================
-# acquisition 開始
-# ==========================================================
-
-worker = threading.Thread(
-    target=acquisition_worker,
-    daemon=True,
-)
-worker.start()
-
-
-# ==========================================================
-# Qt 実行
-# ==========================================================
+# ------------------------------------------------------------
+# GUI
+# ------------------------------------------------------------
 
 exit_code = app.exec_()
-
-worker.join()
 
 pypixet.exit()
 
