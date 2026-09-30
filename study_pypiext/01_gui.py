@@ -1,23 +1,27 @@
+import os
+import site
 import sys
 
-import numpy as np
+pixet_dir = r"C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64"
+
+os.environ["PATH"] = pixet_dir + ";" + os.environ["PATH"]
+site.addsitedir(pixet_dir)
+
 import pypixet
+import numpy as np
+
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
     QPushButton,
+    QSlider,
+    QHBoxLayout,
     QVBoxLayout,
     QWidget,
 )
 
-
-# ============================================================
-# PIXet 初期化
-# ============================================================
-
-print("PIXet start")
 
 pypixet.start()
 pixet = pypixet.pixet
@@ -25,7 +29,7 @@ pixet = pypixet.pixet
 devices = pixet.devices()
 
 if len(devices) == 0:
-    print("MiniPIX not found")
+    print("No devices found")
     pypixet.exit()
     sys.exit(1)
 
@@ -34,54 +38,37 @@ dev = devices[0]
 print("Device:", dev.fullName())
 
 
-# ============================================================
-# GUI と同じ測定条件
-# ============================================================
+# ------------------------------------------------------------
+# GUI と同じ設定
+# ------------------------------------------------------------
 
-COUNT = 100
-TIME = 0.1
-THRESHOLD = 5.0
-BIAS = 150.0
-CLOCK = 9.66667
-
-
-# Counting mode
 pixcfg = dev.pixCfg()
-rc = pixcfg.setModeAll(pixet.PX_TPXMODE_MEDIPIX)
-print("setModeAll Counting:", rc)
 
-# Threshold 5 keV
-rc = dev.setThreshold(
+# Counting
+pixcfg.setModeAll(pixet.PX_TPXMODE_MEDIPIX)
+
+# Threshold = 5 keV
+dev.setThreshold(
     0,
-    THRESHOLD,
+    5.0,
     pixet.PX_THLFLG_ENERGY,
 )
-print("setThreshold:", rc)
 
-# Bias 150 V
-rc = dev.setBias(BIAS)
-print("setBias:", rc)
+# Bias = 150 V
+dev.setBias(150.0)
 
-# Clock 9.66667 MHz
-rc = dev.setTimepixClock(CLOCK)
-print("setTimepixClock:", rc)
-
-print()
-print("Actual settings")
-print("Threshold:", dev.threshold(0, pixet.PX_THLFLG_ENERGY), "keV")
-print("Bias     :", dev.bias(), "V")
-print("Clock    :", dev.timepixClock(), "MHz")
-print()
+# Clock = 9.66667 MHz
+dev.setTimepixClock(9.66667)
 
 
-# ============================================================
-# Qt GUI
-# ============================================================
+# ------------------------------------------------------------
+# Qt
+# ------------------------------------------------------------
 
 app = QApplication(sys.argv)
 
 window = QWidget()
-window.setWindowTitle("MiniPIX Simple Viewer")
+window.setWindowTitle("MiniPIX")
 
 layout = QVBoxLayout(window)
 
@@ -92,8 +79,7 @@ settings_label = QLabel(
     "Time: 0.1 s\n"
     "Threshold: 5 keV    "
     "Bias: 150 V    "
-    "Clock: 9.66667 MHz    "
-    "Range: Min-Max"
+    "Clock: 9.66667 MHz"
 )
 
 image_label = QLabel()
@@ -102,77 +88,52 @@ image_label.setAlignment(Qt.AlignCenter)
 
 status_label = QLabel("Ready")
 
+range_layout = QHBoxLayout()
+
+range_label = QLabel("View Max: 1")
+
+range_slider = QSlider(Qt.Horizontal)
+range_slider.setMinimum(1)
+range_slider.setMaximum(100)
+range_slider.setValue(1)
+
+range_layout.addWidget(range_label)
+range_layout.addWidget(range_slider)
+
 start_button = QPushButton("Start")
 
 layout.addWidget(settings_label)
 layout.addWidget(image_label)
 layout.addWidget(status_label)
+layout.addLayout(range_layout)
 layout.addWidget(start_button)
 
 window.show()
 
 
-# ============================================================
-# 測定
-# ============================================================
+# ------------------------------------------------------------
+# 表示
+# ------------------------------------------------------------
 
-frame_number = 0
-
-timer = QTimer()
+last_data = None
 
 
-def acquire_frame():
-    global frame_number
-
-    if frame_number >= COUNT:
-        timer.stop()
-        start_button.setEnabled(True)
-        status_label.setText("Finished")
+def show_image():
+    if last_data is None:
         return
 
-    rc = dev.doSimpleAcquisition(
-        1,
-        TIME,
-        pixet.PX_FTYPE_NONE,
-        "",
-    )
+    view_max = range_slider.value()
 
-    if rc != 0:
-        timer.stop()
-        start_button.setEnabled(True)
+    display = last_data.astype(np.float64).copy()
 
-        status_label.setText(
-            "Acquisition error: "
-            + str(rc)
-            + " "
-            + dev.lastError()
-        )
-        return
+    display[display < 0] = 0
+    display[display > view_max] = view_max
 
-    frame = dev.lastAcqFrameRefInc()
-
-    data = np.array(
-        frame.data(),
-        dtype=np.float64,
-    )
-
-    data = data.reshape(256, 256)
-
-    minimum = data.min()
-    maximum = data.max()
-
-    # Auto Range: Min-Max
-    display = np.zeros(
-        (256, 256),
-        dtype=np.uint8,
-    )
-
-    if maximum > minimum:
-        display = (
-            (data - minimum)
-            / (maximum - minimum)
-            * 255.0
-        ).astype(np.uint8)
+    display = (
+        display
+        / float(view_max)
+        * 255.0
+    ).astype(np.uint8)
 
     image = QImage(
         display.data,
@@ -185,26 +146,93 @@ def acquire_frame():
     pixmap = QPixmap.fromImage(image)
 
     pixmap = pixmap.scaled(
-        image_label.size(),
+        image_label.width(),
+        image_label.height(),
         Qt.KeepAspectRatio,
         Qt.FastTransformation,
     )
 
     image_label.setPixmap(pixmap)
 
+    range_label.setText(
+        "View Max: " + str(view_max)
+    )
+
+
+def range_changed():
+    show_image()
+
+
+range_slider.valueChanged.connect(range_changed)
+
+
+# ------------------------------------------------------------
+# Acquisition
+# ------------------------------------------------------------
+
+frame_number = 0
+
+
+def acquire():
+    global frame_number
+    global last_data
+
+    if frame_number >= 100:
+        start_button.setEnabled(True)
+        status_label.setText(
+            "Finished - last frame remains displayed"
+        )
+        return
+
+    rc = dev.doSimpleAcquisition(
+        1,
+        0.1,
+        pixet.PX_FTYPE_NONE,
+        "",
+    )
+
+    if rc != 0:
+        start_button.setEnabled(True)
+        status_label.setText(
+            "Acquisition error: " + str(rc)
+        )
+        return
+
+    frame = dev.lastAcqFrameRefInc()
+
+    data = np.array(frame.data())
+    data = data.reshape(256, 256)
+
+    last_data = data.copy()
+
+    minimum = data.min()
+    maximum = data.max()
+    nonzero = np.count_nonzero(data)
+
+    # 実データの最大値に合わせて
+    # View Max スライダーの範囲を広げる
+    slider_max = int(maximum)
+
+    if slider_max < 10:
+        slider_max = 10
+
+    if slider_max > range_slider.maximum():
+        range_slider.setMaximum(slider_max)
+
+    show_image()
+
     frame_number += 1
 
     status_label.setText(
         "Frame: "
         + str(frame_number)
-        + " / "
-        + str(COUNT)
+        + " / 100"
         + "    Min: "
         + str(minimum)
         + "    Max: "
         + str(maximum)
         + "    Non-zero: "
-        + str(np.count_nonzero(data))
+        + str(nonzero)
     )
 
     print(
@@ -215,13 +243,12 @@ def acquire_frame():
         "max",
         maximum,
         "nonzero",
-        np.count_nonzero(data),
+        nonzero,
     )
 
     frame.destroy()
 
-    # 次のフレーム
-    QTimer.singleShot(0, acquire_frame)
+    QTimer.singleShot(0, acquire)
 
 
 def start():
@@ -232,15 +259,15 @@ def start():
     start_button.setEnabled(False)
     status_label.setText("Acquiring...")
 
-    acquire_frame()
+    acquire()
 
 
 start_button.clicked.connect(start)
 
 
-# ============================================================
-# 終了
-# ============================================================
+# ------------------------------------------------------------
+# GUI
+# ------------------------------------------------------------
 
 exit_code = app.exec_()
 
