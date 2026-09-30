@@ -10,7 +10,7 @@ site.addsitedir(pixet_dir)
 import pypixet
 import numpy as np
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
@@ -54,13 +54,17 @@ THRESHOLD = 2.4
 BIAS = 150.0
 CLOCK = 9.66667
 
+# Threshold = 5 keV
 dev.setThreshold(
     0,
     THRESHOLD,
     pixet.PX_THLFLG_ENERGY,
 )
 
+# Bias = 150 V
 dev.setBias(BIAS)
+
+# Clock = 9.66667 MHz
 dev.setTimepixClock(CLOCK)
 
 
@@ -119,7 +123,6 @@ window.show()
 # ------------------------------------------------------------
 
 last_data = None
-frame_number = 0
 
 
 def show_image():
@@ -171,8 +174,11 @@ range_slider.valueChanged.connect(range_changed)
 
 
 # ------------------------------------------------------------
-# Callback
+# Acquisition
 # ------------------------------------------------------------
+
+frame_number = 0
+
 
 def callback_acq_finished(cnt):
     global frame_number
@@ -194,7 +200,30 @@ def callback_acq_finished(cnt):
         maximum = data.max()
         nonzero = np.count_nonzero(data)
 
+        slider_max = int(maximum)
+
+        if slider_max < 10:
+            slider_max = 10
+
+        if slider_max > range_slider.maximum():
+            range_slider.setMaximum(slider_max)
+
         frame_number += 1
+
+        show_image()
+
+        status_label.setText(
+            "Frame: "
+            + str(frame_number)
+            + " / "
+            + str(COUNT)
+            + "    Min: "
+            + str(minimum)
+            + "    Max: "
+            + str(maximum)
+            + "    Non-zero: "
+            + str(nonzero)
+        )
 
         print(
             "Callback",
@@ -209,13 +238,11 @@ def callback_acq_finished(cnt):
             nonzero,
         )
 
+        app.processEvents()
+
     finally:
         frame.destroy()
 
-
-# ------------------------------------------------------------
-# Acquisition
-# ------------------------------------------------------------
 
 def start():
     global frame_number
@@ -225,8 +252,6 @@ def start():
     start_button.setEnabled(False)
     status_label.setText("Acquiring...")
 
-    print("register PX_EVENT_ACQ_FINISHED")
-
     dev.registerEvent(
         pixet.PX_EVENT_ACQ_FINISHED,
         0,
@@ -234,25 +259,12 @@ def start():
     )
 
     try:
-        print(
-            "doSimpleAcquisition({}, {}, PX_FTYPE_NONE, '') - start".format(
-                COUNT,
-                TIME,
-            )
-        )
-
         rc = dev.doSimpleAcquisition(
             COUNT,
             TIME,
             pixet.PX_FTYPE_NONE,
             "",
         )
-
-        print(
-            "doSimpleAcquisition - end:",
-            rc,
-        )
-
     finally:
         dev.unregisterEvent(
             pixet.PX_EVENT_ACQ_FINISHED,
@@ -260,27 +272,16 @@ def start():
             callback_acq_finished,
         )
 
-    if last_data is not None:
-        maximum = last_data.max()
-
-        slider_max = int(maximum)
-
-        if slider_max < 10:
-            slider_max = 10
-
-        if slider_max > range_slider.maximum():
-            range_slider.setMaximum(slider_max)
-
-        show_image()
-
-    status_label.setText(
-        "Finished: "
-        + str(frame_number)
-        + " / "
-        + str(COUNT)
-        + "    rc="
-        + str(rc)
-    )
+    if rc != 0:
+        status_label.setText(
+            "Acquisition error: " + str(rc)
+        )
+    else:
+        status_label.setText(
+            "Finished - "
+            + str(frame_number)
+            + " frames"
+        )
 
     start_button.setEnabled(True)
 
