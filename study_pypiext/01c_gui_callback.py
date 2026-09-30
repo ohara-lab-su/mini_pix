@@ -236,12 +236,6 @@ def update_gui():
         nonzero = latest_nonzero
 
     if data is not None:
-        slider_max = int(maximum)
-
-        if slider_max < 10:
-            slider_max = 10
-
-
         show_image()
 
         status_label.setText(

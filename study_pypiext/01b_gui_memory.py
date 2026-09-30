@@ -11,7 +11,7 @@ import pypixet
 import numpy as np
 import pyqtgraph as pg
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
@@ -135,28 +135,18 @@ def show_image():
 # Acquisition
 # ------------------------------------------------------------
 
-frame_number = 0
-
-
 def acquire():
-    global frame_number
     global last_data
 
-    if frame_number >= 100:
-        start_button.setEnabled(True)
-        status_label.setText(
-            "Finished - last frame remains displayed"
-        )
-        return
+    start_button.setEnabled(False)
+    status_label.setText("Acquiring...")
 
-    ###################################
     rc = dev.doSimpleAcquisition(
         COUNT,
         TIME,
         pixet.PX_FTYPE_NONE,
         "",
     )
-    ###################################
 
     if rc != 0:
         start_button.setEnabled(True)
@@ -165,58 +155,54 @@ def acquire():
         )
         return
 
-    frame = dev.lastAcqFrameRefInc()
+    frame_count = dev.acqFrameCount()
 
-    ###################################
-    data = np.array(frame.data())
-    data = data.reshape(256, 256)
+    for frame_number in range(frame_count):
+        frame = dev.acqFrameRefInc(frame_number)
 
-    last_data = data.copy()
+        try:
+            data = np.array(frame.data())
+            data = data.reshape(256, 256)
+            last_data = data.copy()
 
-    minimum = data.min()
-    maximum = data.max()
-    nonzero = np.count_nonzero(data)
+            minimum = data.min()
+            maximum = data.max()
+            nonzero = np.count_nonzero(data)
 
-    show_image()
+            show_image()
+            QApplication.processEvents()
 
-    frame_number += 1
+            status_label.setText(
+                "Frame: "
+                + str(frame_number + 1)
+                + " / "
+                + str(frame_count)
+                + "    Min: "
+                + str(minimum)
+                + "    Max: "
+                + str(maximum)
+                + "    Non-zero: "
+                + str(nonzero)
+            )
 
-    status_label.setText(
-        "Frame: "
-        + str(frame_number)
-        + f" / {COUNT}"
-        + "    Min: "
-        + str(minimum)
-        + "    Max: "
-        + str(maximum)
-        + "    Non-zero: "
-        + str(nonzero)
-    )
+            print(
+                "Frame",
+                frame_number + 1,
+                "min",
+                minimum,
+                "max",
+                maximum,
+                "nonzero",
+                nonzero,
+            )
 
-    print(
-        "Frame",
-        frame_number,
-        "min",
-        minimum,
-        "max",
-        maximum,
-        "nonzero",
-        nonzero,
-    )
+        finally:
+            frame.destroy()
 
-    frame.destroy()
-
-    QTimer.singleShot(0, acquire)
+    start_button.setEnabled(True)
 
 
 def start():
-    global frame_number
-
-    frame_number = 0
-
-    start_button.setEnabled(False)
-    status_label.setText("Acquiring...")
-
     acquire()
 
 
