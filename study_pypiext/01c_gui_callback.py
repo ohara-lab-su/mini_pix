@@ -11,8 +11,11 @@ site.addsitedir(pixet_dir)
 import pypixet
 import numpy as np
 
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
+from matplotlib.colors import PowerNorm
+
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
@@ -90,9 +93,16 @@ settings_label = QLabel(
     f"Clock: {CLOCK} MHz"
 )
 
-image_label = QLabel()
-image_label.setFixedSize(768, 768)
-image_label.setAlignment(Qt.AlignCenter)
+figure = Figure(figsize=(7.68, 7.68), dpi=100)
+figure.subplots_adjust(left=0, right=1, bottom=0, top=1)
+
+image_canvas = FigureCanvasQTAgg(figure)
+image_canvas.setFixedSize(768, 768)
+
+image_axes = figure.add_subplot(111)
+image_axes.set_axis_off()
+
+image_plot = None
 
 status_label = QLabel("Ready")
 
@@ -111,7 +121,7 @@ range_layout.addWidget(range_slider)
 start_button = QPushButton("Start")
 
 layout.addWidget(settings_label)
-layout.addWidget(image_label)
+layout.addWidget(image_canvas)
 layout.addWidget(status_label)
 layout.addLayout(range_layout)
 layout.addWidget(start_button)
@@ -127,40 +137,38 @@ last_data = None
 
 
 def show_image():
+    global image_plot
+
     if last_data is None:
         return
 
     view_max = range_slider.value()
 
-    display = last_data.astype(np.float64).copy()
+    if image_plot is None:
+        image_plot = image_axes.imshow(
+            last_data,
+            cmap="gray",
+            norm=PowerNorm(
+                gamma=1.0,
+                vmin=0,
+                vmax=view_max,
+                clip=True,
+            ),
+            interpolation="nearest",
+            origin="upper",
+        )
+    else:
+        image_plot.set_data(last_data)
+        image_plot.set_norm(
+            PowerNorm(
+                gamma=1.0,
+                vmin=0,
+                vmax=view_max,
+                clip=True,
+            )
+        )
 
-    display[display < 0] = 0
-    display[display > view_max] = view_max
-
-    display = (
-        display
-        / float(view_max)
-        * 255.0
-    ).astype(np.uint8)
-
-    image = QImage(
-        display.data,
-        256,
-        256,
-        display.strides[0],
-        QImage.Format_Grayscale8,
-    ).copy()
-
-    pixmap = QPixmap.fromImage(image)
-
-    pixmap = pixmap.scaled(
-        image_label.width(),
-        image_label.height(),
-        Qt.KeepAspectRatio,
-        Qt.FastTransformation,
-    )
-
-    image_label.setPixmap(pixmap)
+    image_canvas.draw_idle()
 
     range_label.setText(
         "View Max: " + str(view_max)
