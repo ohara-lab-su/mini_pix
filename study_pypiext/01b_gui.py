@@ -47,18 +47,25 @@ pixcfg = dev.pixCfg()
 # Counting
 pixcfg.setModeAll(pixet.PX_TPXMODE_MEDIPIX)
 
+TIME = 0.1
+COUNT = 100
+
+THRESHOLD = 5.0
+BIAS = 150.0
+CLOCK = 9.66667
+
 # Threshold = 5 keV
 dev.setThreshold(
     0,
-    5.0,
+    THRESHOLD,
     pixet.PX_THLFLG_ENERGY,
 )
 
 # Bias = 150 V
-dev.setBias(150.0)
+dev.setBias(BIAS)
 
 # Clock = 9.66667 MHz
-dev.setTimepixClock(9.66667)
+dev.setTimepixClock(CLOCK)
 
 
 # ------------------------------------------------------------
@@ -73,13 +80,13 @@ window.setWindowTitle("MiniPIX")
 layout = QVBoxLayout(window)
 
 settings_label = QLabel(
-    "Type: Frames    "
-    "Mode: Counting    "
-    "Count: 100    "
-    "Time: 0.1 s\n"
-    "Threshold: 5 keV    "
-    "Bias: 150 V    "
-    "Clock: 9.66667 MHz"
+    f"Type: Frames    "
+    "Mode: Counting   "
+    f"Count: {COUNT}  "
+    f"Time: {TIME} s\n"
+    f"Threshold: {THRESHOLD} keV    "
+    f"Bias: {BIAS} V    "
+    f"Clock: {CLOCK} MHz"
 )
 
 image_label = QLabel()
@@ -184,12 +191,14 @@ def acquire():
         )
         return
 
+    ###################################
     rc = dev.doSimpleAcquisition(
-        1,
-        0.1,
+        COUNT,
+        TIME,
         pixet.PX_FTYPE_NONE,
         "",
     )
+    ###################################
 
     if rc != 0:
         start_button.setEnabled(True)
@@ -200,6 +209,7 @@ def acquire():
 
     frame = dev.lastAcqFrameRefInc()
 
+    ###################################
     data = np.array(frame.data())
     data = data.reshape(256, 256)
 
@@ -226,7 +236,7 @@ def acquire():
     status_label.setText(
         "Frame: "
         + str(frame_number)
-        + " / 100"
+        + f" / {COUNT}"
         + "    Min: "
         + str(minimum)
         + "    Max: "
