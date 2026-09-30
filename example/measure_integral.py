@@ -24,16 +24,17 @@ async def main() -> None:
         set_timeout_sec=config.TIMEOUT,
         async_mode=config.ASYNC_MODE,
     )
+
+    # 保存フォルダ設定
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    OUTPUT_DIR = Path("measurement_output")
+    OUTPUT_DIR = Path("measurement_output") # 保存フォルダ名
     output_path = OUTPUT_DIR / f"minipix_integral_{timestamp}.png"
 
     await client.connect()
 
-    # Energy: TOT
-    # Counting: COUNT
-    # Time: TOA
-    await client.set_mode_all("Energy")
+    # Energy / Counting / Time
+    #await client.set_mode_all("Energy")
+    await client.set_mode_all("Counting")
     await client.set_threshold(5.0)  # keV
     # await client.set_threshold(6.0)  # keV
     await client.set_bias(150) # V
@@ -41,17 +42,17 @@ async def main() -> None:
 
     result = await client.simple_int_acq(
         1,  # FrameCount
-        1.0,  # sec
-        "example.png",  # output_path
-        # name=str(output_path),
+        10.0,  # sec
+        # "example.png",  # output_path
+        name=str(output_path),
         # save_file=False,
         # save_local=True,
         # return_data=True,
     )
 
-    frame_count = len(result.get("frames", []))
-    logger.info(f"integral measurement complete: frames={frame_count}")
-    logger.info(f"saved locally: {output_path.parent.resolve()}")
+    #logger.info(f"measurement complete: result={result}")
+    logger.info(f"saved locally: {output_path.resolve()}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

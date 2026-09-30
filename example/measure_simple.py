@@ -33,7 +33,8 @@ async def main() -> None:
     await client.connect()
 
     # Energy / Counting / Time
-    await client.set_mode_all("Energy")
+    #await client.set_mode_all("Energy")
+    await client.set_mode_all("Counting")
     await client.set_threshold(5.0)  # keV
     # await client.set_threshold(6.0)  # keV
     await client.set_bias(150) # V
@@ -49,7 +50,7 @@ async def main() -> None:
         # return_data=True,
     )
 
-    logger.info(f"measurement complete: result={result}")
+    # logger.info(f"measurement complete: result={result}")
     logger.info(f"saved locally: {output_path.resolve()}")
 
 if __name__ == "__main__":
