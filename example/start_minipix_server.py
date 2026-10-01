@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
-"""MiniPIX gRPC server 起動例。"""
+# -*- coding: utf-8 -*-
 
 from mini_pix.config import Config
 from mini_pix.server_grpc import pixet_grpc_server
 from x_logger import XLogger
 
 
-AUTO_CONNECT = True
-
-
-def main() -> None:
+if __name__ == "__main__":
     config = Config(
         "mini_pix.yaml"
     )
+
+    AUTO_CONNECT = True
 
     logger = XLogger(
         log_level=config.LOGGER_LEVEL,
@@ -26,7 +25,3 @@ def main() -> None:
         logger=logger,
         log_level=config.LOGGER_LEVEL,
     )
-
-
-if __name__ == "__main__":
-    main()
