@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QComboBox,
     QSpinBox,
+    QSizePolicy,
     QHBoxLayout,
     QVBoxLayout,
     QWidget,
@@ -93,6 +94,10 @@ settings_label = QLabel(
 image_label = QLabel()
 # image_label.setFixedSize(768, 768)  # 画像表示領域を固定する場合
 image_label.setMinimumSize(256, 256)
+image_label.setSizePolicy(
+    QSizePolicy.Ignored,
+    QSizePolicy.Ignored,
+)
 image_label.setAlignment(Qt.AlignCenter)
 
 status_label = QLabel("Ready")
@@ -233,15 +238,15 @@ range_max.valueChanged.connect(display_changed)
 interpolation_mode.currentIndexChanged.connect(display_changed)
 
 
-original_resize_event = window.resizeEvent
+original_image_resize_event = image_label.resizeEvent
 
 
-def resize_event(event):
-    original_resize_event(event)
+def image_resize_event(event):
+    original_image_resize_event(event)
     show_image()
 
 
-window.resizeEvent = resize_event
+image_label.resizeEvent = image_resize_event
 
 
 # ------------------------------------------------------------
