@@ -2,14 +2,14 @@
 from datetime import datetime
 from pathlib import Path
 
-import asyncio
+# import asyncio
 
 from mini_pix.config import Config
 from mini_pix.server_grpc import DeviceProxy
 from x_logger import XLogger
 
 
-async def main() -> None:
+def main() -> None:
     config = Config(
         "mini_pix.yaml"
     )
@@ -24,7 +24,7 @@ async def main() -> None:
         server_ip=config.SERVER_IP,
         server_port=config.SERVER_PORT,
         set_timeout_sec=config.TIMEOUT,
-        async_mode=config.ASYNC_MODE,
+        async_mode=False,
     )
 
     timestamp = datetime.now().strftime(
@@ -48,23 +48,23 @@ async def main() -> None:
     #     + ".png"
     # )
 
-    await client.connect()
+    client.connect()
 
     try:
-        await client.set_mode_all(
+        client.set_mode_all(
             "Counting"
         )
-        await client.set_threshold(
+        client.set_threshold(
             5.0
         )
-        await client.set_bias(
+        client.set_bias(
             150
         )
-        await client.set_clock(
+        client.set_clock(
             9.66667
         )
 
-        await client.acquire_frames(
+        client.acquire_frames(
             1,
             1.0,
             name=str(output_path),
@@ -81,12 +81,11 @@ async def main() -> None:
 
     finally:
         try:
-            await client.disconnect()
+            client.disconnect()
         except Exception:
             pass
 
 
 if __name__ == "__main__":
-    asyncio.run(
-        main()
-    )
+    # asyncio.run(main())
+    main()

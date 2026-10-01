@@ -2,17 +2,15 @@
 from datetime import datetime
 from pathlib import Path
 
-import asyncio
+# import asyncio
 
 from mini_pix.config import Config
 from mini_pix.server_grpc import DeviceProxy
 from x_logger import XLogger
 
 
-async def main() -> None:
-    config = Config(
-        "mini_pix.yaml"
-    )
+def main() -> None:
+    config = Config("mini_pix.yaml")
 
     logger = XLogger(
         log_level=config.LOGGER_LEVEL,
@@ -27,19 +25,11 @@ async def main() -> None:
         async_mode=config.ASYNC_MODE,
     )
 
-    timestamp = datetime.now().strftime(
-        "%Y%m%d_%H%M%S"
-    )
-    output_dir = Path(
-        "measurement_output"
-    )
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = Path("measurement_output")
 
     # TIFF: raw detector data
-    output_path = output_dir / (
-        "minipix_integral_"
-        + timestamp
-        + ".tiff"
-    )
+    output_path = output_dir / ("minipix_integral_" + timestamp + ".tiff")
 
     # PNG: display image
     # output_path = output_dir / (
@@ -48,23 +38,15 @@ async def main() -> None:
     #     + ".png"
     # )
 
-    await client.connect()
+    client.connect()
 
     try:
-        await client.set_mode_all(
-            "Counting"
-        )
-        await client.set_threshold(
-            5.0
-        )
-        await client.set_bias(
-            150
-        )
-        await client.set_clock(
-            9.66667
-        )
+        client.set_mode_all("Counting")
+        client.set_threshold(5.0)
+        client.set_bias(150)
+        client.set_clock(9.66667)
 
-        await client.acquire_integral(
+        client.acquire_integral(
             1,
             10.0,
             name=str(output_path),
@@ -72,21 +54,15 @@ async def main() -> None:
             return_data=False,
         )
 
-        logger.info(
-            "saved locally: "
-            + str(
-                output_path.resolve()
-            )
-        )
+        logger.info("saved locally: " + str(output_path.resolve()))
 
     finally:
         try:
-            await client.disconnect()
+            client.disconnect()
         except Exception:
             pass
 
 
 if __name__ == "__main__":
-    asyncio.run(
-        main()
-    )
+    # asyncio.run(main())
+    main()
