@@ -1,3 +1,6 @@
+"""
+function
+"""
 import os
 import site
 import sys

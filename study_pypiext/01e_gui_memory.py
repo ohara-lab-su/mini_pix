@@ -1,3 +1,7 @@
+"""
+normal mode
+class
+"""
 import os
 import site
 import sys

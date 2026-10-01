@@ -1,3 +1,6 @@
+"""
+callback mode
+"""
 import os
 import site
 import sys
