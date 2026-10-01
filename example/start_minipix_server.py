@@ -5,11 +5,13 @@ from mini_pix.config import Config
 from mini_pix.server_grpc import pixet_grpc_server
 from x_logger import XLogger
 
+import grpc_frame.ctrl_pb2_grpc
+
+print(grpc_frame.ctrl_pb2_grpc.__file__)
+
 
 if __name__ == "__main__":
-    config = Config(
-        "mini_pix.yaml"
-    )
+    config = Config("mini_pix.yaml")
 
     AUTO_CONNECT = True
 
