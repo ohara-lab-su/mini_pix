@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
+import asyncio
 from datetime import datetime
 from pathlib import Path
 
-import asyncio
-# from mini_pix.server_grpc import AsyncPixetGrpcClient
 from mini_pix.config import Config
 from mini_pix.server_grpc import DeviceProxy
 from x_logger import XLogger
+
+
+SAVE_FORMAT = "TIFF"
+OUTPUT_DIR = Path("measurement_output")
+
 
 async def main() -> None:
     config = Config("mini_pix.yaml")
@@ -16,7 +20,6 @@ async def main() -> None:
         logger_name=config.CLIENT_LOGGER_NAME,
     )
 
-    # client = AsyncPixetGrpcClient("10.170.10.38", 50051)
     client = DeviceProxy(
         "mini_pix",
         server_ip=config.SERVER_IP,
@@ -25,33 +28,53 @@ async def main() -> None:
         async_mode=config.ASYNC_MODE,
     )
 
-    # 保存フォルダ設定
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    OUTPUT_DIR = Path("measurement_output") # 保存フォルダ名
-    output_path = OUTPUT_DIR / f"minipix_integral_{timestamp}.png"
+
+    if SAVE_FORMAT == "TIFF":
+        output_path = OUTPUT_DIR / (
+            "minipix_integral_"
+            + timestamp
+            + ".tiff"
+        )
+    elif SAVE_FORMAT == "PNG":
+        output_path = OUTPUT_DIR / (
+            "minipix_integral_"
+            + timestamp
+            + ".png"
+        )
+    else:
+        raise ValueError('SAVE_FORMAT must be "TIFF" or "PNG"')
 
     await client.connect()
 
-    # Energy / Counting / Time
-    #await client.set_mode_all("Energy")
-    await client.set_mode_all("Counting")
-    await client.set_threshold(5.0)  # keV
-    # await client.set_threshold(6.0)  # keV
-    await client.set_bias(150) # V
-    await client.set_clock(9.66667) # MHz
+    try:
+        await client.set_mode_all("Counting")
+        await client.set_threshold(5.0)
+        await client.set_bias(150)
+        await client.set_clock(9.66667)
 
-    result = await client.simple_int_acq(
-        1,  # FrameCount
-        10.0,  # sec
-        # "example.png",  # output_path
-        name=str(output_path),
-        # save_file=False,
-        # save_local=True,
-        # return_data=True,
-    )
+        result = await client.acquire_integral(
+            1,
+            10.0,
+            name=str(output_path),
+            save_local=True,
+            return_data=True,
+        )
 
-    #logger.info(f"measurement complete: result={result}")
-    logger.info(f"saved locally: {output_path.resolve()}")
+        logger.info(
+            "measurement complete: frame_count="
+            + str(result["frame_count"])
+        )
+        logger.info(
+            "saved locally: "
+            + str(output_path.resolve())
+        )
+
+    finally:
+        try:
+            await client.disconnect()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

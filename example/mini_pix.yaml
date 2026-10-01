@@ -7,4 +7,4 @@ TIMEOUT: 30.0
 LOGGER_LEVEL: "debug"
 
 # --- mini-pix-client
-ASYNC_MODE: true
+ASYNC_MODE: false

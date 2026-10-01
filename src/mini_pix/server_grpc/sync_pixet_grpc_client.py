@@ -7,6 +7,14 @@ from mini_pix.server_grpc.async_pixet_grpc_client import AsyncPixetGrpcClient
 
 
 class SyncPixetGrpcClient(AsyncPixetGrpcClient, SyncGrpcClient):
+    """
+    MiniPixCtrl の同期 gRPC クライアント。
+
+    通常測定結果の TIFF / PNG ローカル保存に対応する。
+    VIEW の逐次表示は AsyncPixetGrpcClient.stream_frames() /
+    stream_integral() を使用する。
+    """
+
     def __init__(
         self,
         server_ip: str,
@@ -23,6 +31,7 @@ class SyncPixetGrpcClient(AsyncPixetGrpcClient, SyncGrpcClient):
             )
 
         effective_timeout_sec = set_timeout_sec
+
         if timeout_sec is not None:
             effective_timeout_sec = timeout_sec
 
@@ -36,58 +45,65 @@ class SyncPixetGrpcClient(AsyncPixetGrpcClient, SyncGrpcClient):
             grpc_options=grpc_options,
         )
 
-        self._grpc_simple_acq = self.simple_acq
-        self.simple_acq = self._simple_acq_sync
+        self._server_ip = server_ip
+        self._server_port = int(server_port)
+        self._stream_timeout_sec = effective_timeout_sec
+        self._grpc_options = grpc_options
 
-    def _simple_acq_sync(
+        self._grpc_acquire_frames = self.acquire_frames
+        self._grpc_acquire_integral = self.acquire_integral
+
+        self.acquire_frames = self._acquire_frames_sync
+        self.acquire_integral = self._acquire_integral_sync
+
+    def _acquire_frames_sync(
         self,
         count: int,
         sec: float,
-        name: str = "example.png",
         *,
-        save_file: bool = False,
-        save_local: bool = True,
-        return_data: bool = False,
+        name: Optional[str] = None,
+        save_local: bool = False,
+        return_data: bool = True,
+        save_format: Optional[str] = None,
+        save_path: Optional[str] = None,
     ):
-        result = self._grpc_simple_acq(
+        result = self._grpc_acquire_frames(
             count,
             sec,
-            name=name,
-            save_file=save_file,
-            return_data=True,
+            callback=None,
+            save_format=save_format,
+            save_path=save_path,
         )
-        return self._finish_simple_acq(result, name, save_local, return_data)
 
+        return self._finish_acquisition(
+            result,
+            name,
+            save_local,
+            return_data,
+        )
 
-if __name__ == "__main__":
-    from mini_pix.config import Config
-    from x_logger import XLogger
+    def _acquire_integral_sync(
+        self,
+        count: int,
+        sec: float,
+        *,
+        name: Optional[str] = None,
+        save_local: bool = False,
+        return_data: bool = True,
+        save_format: Optional[str] = None,
+        save_path: Optional[str] = None,
+    ):
+        result = self._grpc_acquire_integral(
+            count,
+            sec,
+            callback=None,
+            save_format=save_format,
+            save_path=save_path,
+        )
 
-    config = Config("mini_pix.yaml")
-
-    logger_ = XLogger(
-        log_level=config.LOGGER_LEVEL,
-        logger_name=config.CLIENT_LOGGER_NAME,
-    )
-
-    client = SyncPixetGrpcClient(
-        server_ip=config.SERVER_IP,
-        server_port=config.SERVER_PORT,
-        set_timeout_sec=config.TIMEOUT,
-        logger=logger_,
-        log_level=config.LOGGER_LEVEL,
-    )
-
-    try:
-        client.connect()
-        client.set_mode_all("TOT")
-        #client.set_threshold(1000)
-        client.set_threshold(6.0)
-        client.set_bias(150)  # V
-        client.set_clock(9.66667)  # Mhz
-        client.simple_acq(1, 3.0, "example.png")
-    finally:
-        try:
-            client.disconnect()
-        except Exception:
-            pass
+        return self._finish_acquisition(
+            result,
+            name,
+            save_local,
+            return_data,
+        )

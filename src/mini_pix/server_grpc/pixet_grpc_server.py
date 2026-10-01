@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from typing import Any, Optional
+import queue
+import threading
+from typing import Any, Dict, Iterator, Optional
 
 import grpc
 from grpc import channel_ready_future
@@ -10,6 +12,105 @@ from grpc_frame.grpc_server import create_grpc_server
 from mini_pix.config import Config
 from mini_pix.pixet_ctrl import MiniPixCtrl
 from x_logger import XLogger
+
+
+class MiniPixGrpcCtrl(MiniPixCtrl):
+    """
+    gRPC サーバーでのみ使用する MiniPixCtrl 派生クラス。
+
+    MiniPixCtrl 本体には gRPC や通信処理を入れない。
+    通常 API は MiniPixCtrl からそのまま継承し、VIEW 用の逐次転送だけを
+    generator API として追加する。
+    """
+
+    def stream_frames(
+        self,
+        count: int,
+        sec: float,
+    ) -> Iterator[Dict[str, Any]]:
+        frame_queue = queue.Queue()
+        end_marker = object()
+        errors = []
+
+        def callback(frame):
+            frame_queue.put(frame)
+
+        def acquisition_worker():
+            try:
+                self.acquire_frames(
+                    count=count,
+                    sec=sec,
+                    callback=callback,
+                )
+            except Exception as error:
+                errors.append(error)
+            finally:
+                frame_queue.put(end_marker)
+
+        worker = threading.Thread(
+            target=acquisition_worker,
+            daemon=True,
+        )
+        worker.start()
+
+        while True:
+            frame = frame_queue.get()
+
+            if frame is end_marker:
+                break
+
+            yield frame
+
+        worker.join()
+
+        if len(errors) > 0:
+            raise errors[0]
+
+    def stream_integral(
+        self,
+        count: int,
+        sec: float,
+    ) -> Iterator[Dict[str, Any]]:
+        """
+        Integral は PIXet 内部で積算し、最終積算フレームだけを1回 yield する。
+        """
+        frame_queue = queue.Queue()
+        end_marker = object()
+        errors = []
+
+        def callback(frame):
+            frame_queue.put(frame)
+
+        def acquisition_worker():
+            try:
+                self.acquire_integral(
+                    count=count,
+                    sec=sec,
+                    callback=callback,
+                )
+            except Exception as error:
+                errors.append(error)
+            finally:
+                frame_queue.put(end_marker)
+
+        worker = threading.Thread(
+            target=acquisition_worker,
+            daemon=True,
+        )
+        worker.start()
+
+        while True:
+            frame = frame_queue.get()
+
+            if frame is end_marker:
+                break
+
+            yield frame
+
+        worker.join()
+
+        if len(errors) > 0:
+            raise errors[0]
 
 
 def pixet_grpc_server(
@@ -21,21 +122,21 @@ def pixet_grpc_server(
     log_level: Optional[str] = None,
 ) -> None:
     if logger is None:
-        import logging
+        raise ValueError("logger is required")
 
-        log_level = log_level or "INFO"
-        logging.basicConfig(level=log_level.upper())
-        logger = logging.getLogger(__name__)
-
-    ctrl = MiniPixCtrl(
+    ctrl = MiniPixGrpcCtrl(
         logger=logger,
         log_level=log_level,
     )
     server = None
+    channel = None
 
     try:
         if auto_connect:
-            ctrl.connect()
+            connected = ctrl.connect()
+
+            if not connected:
+                raise RuntimeError("MiniPIX connection failed")
 
         server = create_grpc_server(
             ctrl_obj=ctrl,
@@ -44,16 +145,17 @@ def pixet_grpc_server(
             max_workers=10,
         )
 
-        bind_addr = f"{grpc_host}:{grpc_port}"
+        bind_addr = str(grpc_host) + ":" + str(grpc_port)
         ret = server.add_insecure_port(bind_addr)
+
         if ret == 0:
-            raise RuntimeError(f"bind failed: {bind_addr}")
+            raise RuntimeError("bind failed: " + bind_addr)
 
         server.start()
-        logger.info(f"gRPC start OK: {bind_addr}")
+        logger.info("gRPC start OK: " + bind_addr)
 
-        ch = grpc.insecure_channel(bind_addr)
-        channel_ready_future(ch).result(timeout=2.0)
+        channel = grpc.insecure_channel(bind_addr)
+        channel_ready_future(channel).result(timeout=2.0)
         logger.info("gRPC self-check OK")
 
         server.wait_for_termination()
@@ -62,6 +164,9 @@ def pixet_grpc_server(
         logger.info("KeyboardInterrupt")
 
     finally:
+        if channel is not None:
+            channel.close()
+
         if server is not None:
             server.stop(grace=None)
 
