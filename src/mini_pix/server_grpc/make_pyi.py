@@ -15,7 +15,7 @@ mini_pix.server_grpc の pyi 生成用 make_pyi.py である。
 ・ gRPC client pyi は grpc_frame.make_pyi.generate_client_pyi を使う。
 ・ __init__.py / __init__.pyi は公開 API の手書きファイルであり、生成・削除・上書きしない。
 ・ pixet_ctrl.py は制御本体であり、__init__.py には import しない。
-・ client 側で実装されている simple_acq の上書きと補助メソッドは、生成 pyi 後に補正する。
+・ client 側で実装されている acquire_frames/acquire_integral の上書きと補助メソッドは、生成 pyi 後に補正する。
 """
 
 import re
@@ -193,7 +193,7 @@ def _patch_client_pyi(filename, base_import_line, class_name, base_class_name, e
     lines = _ensure_import(lines, "from typing import Any")
     lines = _ensure_import(lines, base_import_line)
     lines = _replace_class_base(lines, class_name, base_class_name)
-    lines = _remove_class_members(lines, class_name, ["simple_acq"])
+    lines = _remove_class_members(lines, class_name, ["acquire_frames", "acquire_integral"])
     lines = _ensure_class_members(lines, class_name, extra_lines)
     _write_lines(filename, lines)
 
@@ -222,8 +222,10 @@ def make_client_pyi():
         base_class_name="AsyncPixetGrpcClient",
         extra_lines=[
             "    # --- methods defined in .py, not in ctrl-derived pyi ---",
-            "    def _simple_acq_sync(self, count: int, sec: float, name: str = ..., *, save_file: bool = ..., save_local: bool = ..., return_data: bool = ...) -> Any: ...",
-            "    def simple_acq(self, count: int, sec: float, name: str = ..., *, save_file: bool = ..., save_local: bool = ..., return_data: bool = ...) -> Any: ...",
+            "    def _acquire_frames_sync(self, count: int, sec: float, name: str = ..., *, save_local: bool = ..., return_data: bool = ..., save_format: Any = ..., save_path: Any = ...) -> Any: ...",
+            "    def _acquire_integral_sync(self, count: int, sec: float, name: str = ..., *, save_local: bool = ..., return_data: bool = ..., save_format: Any = ..., save_path: Any = ...) -> Any: ...",
+            "    def acquire_frames(self, count: int, sec: float, name: str = ..., *, save_local: bool = ..., return_data: bool = ..., save_format: Any = ..., save_path: Any = ...) -> Any: ...",
+            "    def acquire_integral(self, count: int, sec: float, name: str = ..., *, save_local: bool = ..., return_data: bool = ..., save_format: Any = ..., save_path: Any = ...) -> Any: ...",
         ],
     )
 
@@ -245,16 +247,17 @@ def make_client_pyi():
         extra_lines=[
             "    # --- methods defined in .py, not in ctrl-derived pyi ---",
             "    @staticmethod",
-            "    def _format_file_name(value: str) -> str: ...",
-            "    @staticmethod",
             "    def _make_png_chunk(chunk_type: bytes, data: bytes) -> bytes: ...",
             "    @classmethod",
-            "    def _write_png(cls, path: Any, width: int, height: int, data: list) -> None: ...",
+            "    def _write_png(cls, path: Any, data: Any) -> None: ...",
             "    @classmethod",
             "    def _save_result_files(cls, result: dict, name: str) -> None: ...",
-            "    def _finish_simple_acq(self, result: dict, name: str, save_local: bool, return_data: bool) -> Any: ...",
-            "    async def _simple_acq_async(self, count: int, sec: float, name: str = ..., *, save_file: bool = ..., save_local: bool = ..., return_data: bool = ...) -> Any: ...",
-            "    async def simple_acq(self, count: int, sec: float, name: str = ..., *, save_file: bool = ..., save_local: bool = ..., return_data: bool = ...) -> Any: ...",
+            "    @classmethod",
+            "    def _finish_acquisition(cls, result: dict, name: str, save_local: bool, return_data: bool) -> Any: ...",
+            "    async def _acquire_frames_async(self, count: int, sec: float, name: str = ..., *, save_local: bool = ..., return_data: bool = ..., save_format: Any = ..., save_path: Any = ...) -> Any: ...",
+            "    async def _acquire_integral_async(self, count: int, sec: float, name: str = ..., *, save_local: bool = ..., return_data: bool = ..., save_format: Any = ..., save_path: Any = ...) -> Any: ...",
+            "    async def acquire_frames(self, count: int, sec: float, name: str = ..., *, save_local: bool = ..., return_data: bool = ..., save_format: Any = ..., save_path: Any = ...) -> Any: ...",
+            "    async def acquire_integral(self, count: int, sec: float, name: str = ..., *, save_local: bool = ..., return_data: bool = ..., save_format: Any = ..., save_path: Any = ...) -> Any: ...",
         ],
     )
 
