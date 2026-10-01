@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Start the MiniPIX gRPC device server."""
+"""MiniPIX gRPC server 起動例。"""
 
 from mini_pix.config import Config
 from mini_pix.server_grpc import pixet_grpc_server
@@ -10,7 +10,9 @@ AUTO_CONNECT = True
 
 
 def main() -> None:
-    config = Config("mini_pix.yaml")
+    config = Config(
+        "mini_pix.yaml"
+    )
 
     logger = XLogger(
         log_level=config.LOGGER_LEVEL,

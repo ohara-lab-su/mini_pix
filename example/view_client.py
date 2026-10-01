@@ -11,34 +11,51 @@ from mini_pix.server_grpc import AsyncPixetGrpcClient
 from x_logger import XLogger
 
 
-class ImageView(QtWidgets.QGraphicsView):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+TOPIC_NAME = "minipix.frame"
 
-        self._scene = QtWidgets.QGraphicsScene(self)
-        self.setScene(self._scene)
+
+class ImageView(QtWidgets.QGraphicsView):
+    def __init__(
+        self,
+        parent=None,
+    ):
+        super().__init__(
+            parent
+        )
+
+        self._scene = QtWidgets.QGraphicsScene(
+            self
+        )
+        self.setScene(
+            self._scene
+        )
 
         self._pixmap_item = QtWidgets.QGraphicsPixmapItem()
-        self._scene.addItem(self._pixmap_item)
+        self._scene.addItem(
+            self._pixmap_item
+        )
 
-        self.setAlignment(QtCore.Qt.AlignCenter)
+        self.setAlignment(
+            QtCore.Qt.AlignCenter
+        )
         self.setHorizontalScrollBarPolicy(
             QtCore.Qt.ScrollBarAlwaysOff
         )
         self.setVerticalScrollBarPolicy(
             QtCore.Qt.ScrollBarAlwaysOff
         )
-        self.setBackgroundBrush(
-            QtGui.QBrush(QtGui.QColor(0, 0, 0))
-        )
 
     def set_image(
         self,
-        image: QtGui.QImage,
-        smooth: bool,
+        image,
+        smooth,
     ):
-        pixmap = QtGui.QPixmap.fromImage(image)
-        self._pixmap_item.setPixmap(pixmap)
+        pixmap = QtGui.QPixmap.fromImage(
+            image
+        )
+        self._pixmap_item.setPixmap(
+            pixmap
+        )
 
         if smooth:
             self._pixmap_item.setTransformationMode(
@@ -63,25 +80,27 @@ class ImageView(QtWidgets.QGraphicsView):
             QtCore.Qt.KeepAspectRatio,
         )
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
+    def resizeEvent(
+        self,
+        event,
+    ):
+        super().resizeEvent(
+            event
+        )
         self._fit_image()
 
 
 class ViewSignals(QtCore.QObject):
-    frame_received = QtCore.pyqtSignal(object)
+    frame_received = QtCore.pyqtSignal(
+        object
+    )
     acquisition_finished = QtCore.pyqtSignal()
-    acquisition_error = QtCore.pyqtSignal(str)
+    acquisition_error = QtCore.pyqtSignal(
+        str
+    )
 
 
 class ClientView(QtWidgets.QMainWindow):
-    """
-    MiniPIX gRPC VIEW client。
-
-    サーバーから送られる逐次フレームを VIEW クライアント側の frames に蓄積する。
-    したがって測定中も測定後も、受信済み履歴を slider / < / > で閲覧できる。
-    """
-
     def __init__(
         self,
         config,
@@ -109,14 +128,23 @@ class ClientView(QtWidgets.QMainWindow):
 
         self._build_ui()
 
-        self.setWindowTitle("MiniPIX Client View")
-        self.resize(1050, 800)
+        self.setWindowTitle(
+            "MiniPIX Client View"
+        )
+        self.resize(
+            1050,
+            800,
+        )
 
     def _build_ui(self):
         central = QtWidgets.QWidget()
-        self.setCentralWidget(central)
+        self.setCentralWidget(
+            central
+        )
 
-        main_layout = QtWidgets.QVBoxLayout(central)
+        main_layout = QtWidgets.QVBoxLayout(
+            central
+        )
 
         control_layout = QtWidgets.QGridLayout()
 
@@ -129,18 +157,38 @@ class ClientView(QtWidgets.QMainWindow):
         )
 
         self.count_spin = QtWidgets.QSpinBox()
-        self.count_spin.setRange(1, 1000000)
-        self.count_spin.setValue(1)
+        self.count_spin.setRange(
+            1,
+            1000000,
+        )
+        self.count_spin.setValue(
+            1
+        )
 
         self.time_spin = QtWidgets.QDoubleSpinBox()
-        self.time_spin.setRange(0.001, 1000000.0)
-        self.time_spin.setDecimals(3)
-        self.time_spin.setValue(1.0)
-        self.time_spin.setSuffix(" s")
+        self.time_spin.setRange(
+            0.001,
+            1000000.0,
+        )
+        self.time_spin.setDecimals(
+            3
+        )
+        self.time_spin.setValue(
+            1.0
+        )
+        self.time_spin.setSuffix(
+            " s"
+        )
 
-        self.start_button = QtWidgets.QPushButton("Start")
-        self.stop_button = QtWidgets.QPushButton("Stop")
-        self.stop_button.setEnabled(False)
+        self.start_button = QtWidgets.QPushButton(
+            "Start"
+        )
+        self.stop_button = QtWidgets.QPushButton(
+            "Stop"
+        )
+        self.stop_button.setEnabled(
+            False
+        )
 
         self.start_button.clicked.connect(
             self._start_acquisition
@@ -150,7 +198,9 @@ class ClientView(QtWidgets.QMainWindow):
         )
 
         control_layout.addWidget(
-            QtWidgets.QLabel("Acquisition"),
+            QtWidgets.QLabel(
+                "Acquisition"
+            ),
             0,
             0,
         )
@@ -160,7 +210,9 @@ class ClientView(QtWidgets.QMainWindow):
             1,
         )
         control_layout.addWidget(
-            QtWidgets.QLabel("Count"),
+            QtWidgets.QLabel(
+                "Count"
+            ),
             0,
             2,
         )
@@ -170,7 +222,9 @@ class ClientView(QtWidgets.QMainWindow):
             3,
         )
         control_layout.addWidget(
-            QtWidgets.QLabel("Time"),
+            QtWidgets.QLabel(
+                "Time"
+            ),
             0,
             4,
         )
@@ -190,14 +244,18 @@ class ClientView(QtWidgets.QMainWindow):
             7,
         )
 
-        main_layout.addLayout(control_layout)
+        main_layout.addLayout(
+            control_layout
+        )
 
         display_layout = QtWidgets.QHBoxLayout()
 
         self.auto_range_check = QtWidgets.QCheckBox(
             "Auto range"
         )
-        self.auto_range_check.setChecked(True)
+        self.auto_range_check.setChecked(
+            True
+        )
         self.auto_range_check.stateChanged.connect(
             self._redraw_current
         )
@@ -207,8 +265,12 @@ class ClientView(QtWidgets.QMainWindow):
             -1000000000.0,
             1000000000.0,
         )
-        self.minimum_spin.setDecimals(3)
-        self.minimum_spin.setValue(0.0)
+        self.minimum_spin.setDecimals(
+            3
+        )
+        self.minimum_spin.setValue(
+            0.0
+        )
         self.minimum_spin.valueChanged.connect(
             self._redraw_current
         )
@@ -218,8 +280,12 @@ class ClientView(QtWidgets.QMainWindow):
             -1000000000.0,
             1000000000.0,
         )
-        self.maximum_spin.setDecimals(3)
-        self.maximum_spin.setValue(6.0)
+        self.maximum_spin.setDecimals(
+            3
+        )
+        self.maximum_spin.setValue(
+            6.0
+        )
         self.maximum_spin.valueChanged.connect(
             self._redraw_current
         )
@@ -235,32 +301,61 @@ class ClientView(QtWidgets.QMainWindow):
             self._redraw_current
         )
 
-        display_layout.addWidget(self.auto_range_check)
-        display_layout.addWidget(QtWidgets.QLabel("Min"))
-        display_layout.addWidget(self.minimum_spin)
-        display_layout.addWidget(QtWidgets.QLabel("Max"))
-        display_layout.addWidget(self.maximum_spin)
         display_layout.addWidget(
-            QtWidgets.QLabel("Interpolation")
+            self.auto_range_check
         )
-        display_layout.addWidget(self.interpolation_combo)
+        display_layout.addWidget(
+            QtWidgets.QLabel(
+                "Min"
+            )
+        )
+        display_layout.addWidget(
+            self.minimum_spin
+        )
+        display_layout.addWidget(
+            QtWidgets.QLabel(
+                "Max"
+            )
+        )
+        display_layout.addWidget(
+            self.maximum_spin
+        )
+        display_layout.addWidget(
+            QtWidgets.QLabel(
+                "Interpolation"
+            )
+        )
+        display_layout.addWidget(
+            self.interpolation_combo
+        )
         display_layout.addStretch()
 
-        main_layout.addLayout(display_layout)
+        main_layout.addLayout(
+            display_layout
+        )
 
         self.image_view = ImageView()
-        main_layout.addWidget(self.image_view, 1)
+        main_layout.addWidget(
+            self.image_view,
+            1,
+        )
 
         history_layout = QtWidgets.QHBoxLayout()
 
-        self.previous_button = QtWidgets.QPushButton("<")
-        self.next_button = QtWidgets.QPushButton(">")
+        self.previous_button = QtWidgets.QPushButton(
+            "<"
+        )
+        self.next_button = QtWidgets.QPushButton(
+            ">"
+        )
 
         self.frame_slider = QtWidgets.QSlider(
             QtCore.Qt.Horizontal
         )
-        self.frame_slider.setRange(0, 0)
-        self.frame_slider.setValue(0)
+        self.frame_slider.setRange(
+            0,
+            0,
+        )
 
         self.frame_label = QtWidgets.QLabel(
             "Frame: 0 / 0"
@@ -276,31 +371,75 @@ class ClientView(QtWidgets.QMainWindow):
             self._slider_changed
         )
 
-        history_layout.addWidget(self.previous_button)
-        history_layout.addWidget(self.frame_slider, 1)
-        history_layout.addWidget(self.next_button)
-        history_layout.addWidget(self.frame_label)
+        history_layout.addWidget(
+            self.previous_button
+        )
+        history_layout.addWidget(
+            self.frame_slider,
+            1,
+        )
+        history_layout.addWidget(
+            self.next_button
+        )
+        history_layout.addWidget(
+            self.frame_label
+        )
 
-        main_layout.addLayout(history_layout)
+        main_layout.addLayout(
+            history_layout
+        )
 
-        self.status_label = QtWidgets.QLabel("Idle")
-        main_layout.addWidget(self.status_label)
+        self.status_label = QtWidgets.QLabel(
+            "Idle"
+        )
+        main_layout.addWidget(
+            self.status_label
+        )
+
+    def _new_client(
+        self,
+        timeout,
+    ):
+        return AsyncPixetGrpcClient(
+            server_ip=self.config.SERVER_IP,
+            server_port=self.config.SERVER_PORT,
+            set_timeout_sec=timeout,
+            logger=self.logger,
+            log_level=self.config.LOGGER_LEVEL,
+        )
 
     def _start_acquisition(self):
         self.frames = []
         self.current_index = -1
         self.follow_latest = True
 
-        self.frame_slider.blockSignals(True)
-        self.frame_slider.setRange(0, 0)
-        self.frame_slider.setValue(0)
-        self.frame_slider.blockSignals(False)
+        self.frame_slider.blockSignals(
+            True
+        )
+        self.frame_slider.setRange(
+            0,
+            0,
+        )
+        self.frame_slider.setValue(
+            0
+        )
+        self.frame_slider.blockSignals(
+            False
+        )
 
-        self.frame_label.setText("Frame: 0 / 0")
+        self.frame_label.setText(
+            "Frame: 0 / 0"
+        )
 
-        self.start_button.setEnabled(False)
-        self.stop_button.setEnabled(True)
-        self.status_label.setText("Running")
+        self.start_button.setEnabled(
+            False
+        )
+        self.stop_button.setEnabled(
+            True
+        )
+        self.status_label.setText(
+            "Running"
+        )
 
         acquisition_type = (
             self.acquisition_type_combo.currentText()
@@ -309,7 +448,7 @@ class ClientView(QtWidgets.QMainWindow):
         sec = self.time_spin.value()
 
         thread = threading.Thread(
-            target=self._stream_worker,
+            target=self._worker,
             args=(
                 acquisition_type,
                 count,
@@ -319,7 +458,7 @@ class ClientView(QtWidgets.QMainWindow):
         )
         thread.start()
 
-    def _stream_worker(
+    def _worker(
         self,
         acquisition_type,
         count,
@@ -327,7 +466,7 @@ class ClientView(QtWidgets.QMainWindow):
     ):
         try:
             asyncio.run(
-                self._stream_acquisition(
+                self._run_remote(
                     acquisition_type,
                     count,
                     sec,
@@ -340,44 +479,78 @@ class ClientView(QtWidgets.QMainWindow):
                 str(error)
             )
 
-    async def _stream_acquisition(
+    async def _run_remote(
         self,
         acquisition_type,
         count,
         sec,
     ):
-        client = AsyncPixetGrpcClient(
-            server_ip=self.config.SERVER_IP,
-            server_port=self.config.SERVER_PORT,
-            set_timeout_sec=None,
-            logger=self.logger,
-            log_level=self.config.LOGGER_LEVEL,
+        client = self._new_client(
+            None
         )
 
         await client.connect()
 
+        subscription = None
+
         try:
-            await client.set_mode_all("Counting")
-            await client.set_threshold(2.4)
-            await client.set_bias(150.0)
-            await client.set_clock(9.66667)
+            await client.set_mode_all(
+                "Counting"
+            )
+            await client.set_threshold(
+                2.4
+            )
+            await client.set_bias(
+                150.0
+            )
+            await client.set_clock(
+                9.66667
+            )
+
+            subscription = client.subscribe(
+                TOPIC_NAME
+            )
+
+            async def receive_frames():
+                async for event in subscription:
+                    payload = event
+
+                    if isinstance(
+                        event,
+                        dict,
+                    ):
+                        if "payload" in event:
+                            payload = event["payload"]
+
+                    self.signals.frame_received.emit(
+                        payload
+                    )
+
+            receive_task = asyncio.create_task(
+                receive_frames()
+            )
 
             if acquisition_type == "Integral":
-                async for frame in client.stream_integral(
+                await client.acquire_integral(
                     count,
                     sec,
-                ):
-                    self.signals.frame_received.emit(
-                        frame
-                    )
+                    save_local=False,
+                    return_data=False,
+                )
             else:
-                async for frame in client.stream_frames(
+                await client.acquire_frames(
                     count,
                     sec,
-                ):
-                    self.signals.frame_received.emit(
-                        frame
-                    )
+                    save_local=False,
+                    return_data=False,
+                )
+
+            receive_task.cancel()
+
+            try:
+                await receive_task
+            except asyncio.CancelledError:
+                pass
 
         finally:
             try:
@@ -386,7 +559,9 @@ class ClientView(QtWidgets.QMainWindow):
                 pass
 
     def _stop_acquisition(self):
-        self.status_label.setText("Stopping")
+        self.status_label.setText(
+            "Stopping"
+        )
 
         thread = threading.Thread(
             target=self._stop_worker,
@@ -396,19 +571,17 @@ class ClientView(QtWidgets.QMainWindow):
 
     def _stop_worker(self):
         try:
-            asyncio.run(self._stop_remote())
+            asyncio.run(
+                self._stop_remote()
+            )
         except Exception as error:
             self.signals.acquisition_error.emit(
                 str(error)
             )
 
     async def _stop_remote(self):
-        client = AsyncPixetGrpcClient(
-            server_ip=self.config.SERVER_IP,
-            server_port=self.config.SERVER_PORT,
-            set_timeout_sec=self.config.TIMEOUT,
-            logger=self.logger,
-            log_level=self.config.LOGGER_LEVEL,
+        client = self._new_client(
+            self.config.TIMEOUT
         )
 
         await client.connect()
@@ -421,40 +594,82 @@ class ClientView(QtWidgets.QMainWindow):
             except Exception:
                 pass
 
-    def _on_frame_received(self, frame):
-        self.frames.append(frame)
+    def _on_frame_received(
+        self,
+        frame,
+    ):
+        if not isinstance(
+            frame,
+            dict,
+        ):
+            return
 
-        new_index = len(self.frames) - 1
+        if "data" not in frame:
+            return
 
-        self.frame_slider.blockSignals(True)
-        self.frame_slider.setMaximum(new_index)
+        self.frames.append(
+            frame
+        )
+
+        new_index = len(
+            self.frames
+        ) - 1
+
+        self.frame_slider.blockSignals(
+            True
+        )
+        self.frame_slider.setMaximum(
+            new_index
+        )
 
         if self.follow_latest:
             self.current_index = new_index
-            self.frame_slider.setValue(new_index)
+            self.frame_slider.setValue(
+                new_index
+            )
 
-        self.frame_slider.blockSignals(False)
+        self.frame_slider.blockSignals(
+            False
+        )
 
         if self.follow_latest:
-            self._display_frame(self.current_index)
+            self._display_frame(
+                self.current_index
+            )
         else:
             self._update_frame_label()
 
     def _on_acquisition_finished(self):
-        self.start_button.setEnabled(True)
-        self.stop_button.setEnabled(False)
+        self.start_button.setEnabled(
+            True
+        )
+        self.stop_button.setEnabled(
+            False
+        )
 
         self.status_label.setText(
             "Finished    Frames: "
-            + str(len(self.frames))
+            + str(
+                len(
+                    self.frames
+                )
+            )
         )
 
-    def _on_acquisition_error(self, message):
-        self.start_button.setEnabled(True)
-        self.stop_button.setEnabled(False)
+    def _on_acquisition_error(
+        self,
+        message,
+    ):
+        self.start_button.setEnabled(
+            True
+        )
+        self.stop_button.setEnabled(
+            False
+        )
 
         self.status_label.setText(
-            "Error: " + message
+            "Error: "
+            + message
         )
 
         QtWidgets.QMessageBox.critical(
@@ -463,38 +678,51 @@ class ClientView(QtWidgets.QMainWindow):
             message,
         )
 
-    def _slider_changed(self, value):
-        if len(self.frames) == 0:
+    def _slider_changed(
+        self,
+        value,
+    ):
+        if len(
+            self.frames
+        ) == 0:
             return
 
-        self.current_index = int(value)
+        self.current_index = int(
+            value
+        )
 
-        last_index = len(self.frames) - 1
+        last_index = len(
+            self.frames
+        ) - 1
 
         if self.current_index == last_index:
             self.follow_latest = True
         else:
             self.follow_latest = False
 
-        self._display_frame(self.current_index)
+        self._display_frame(
+            self.current_index
+        )
 
     def _previous_frame(self):
-        if len(self.frames) == 0:
-            return
-
         if self.current_index <= 0:
             return
 
         self.follow_latest = False
+
         self.frame_slider.setValue(
             self.current_index - 1
         )
 
     def _next_frame(self):
-        if len(self.frames) == 0:
+        if len(
+            self.frames
+        ) == 0:
             return
 
-        last_index = len(self.frames) - 1
+        last_index = len(
+            self.frames
+        ) - 1
 
         if self.current_index >= last_index:
             return
@@ -504,29 +732,48 @@ class ClientView(QtWidgets.QMainWindow):
         )
 
     def _redraw_current(self):
-        if len(self.frames) == 0:
-            return
-
         if self.current_index < 0:
             return
 
-        self._display_frame(self.current_index)
+        self._display_frame(
+            self.current_index
+        )
 
-    def _display_frame(self, index):
+    def _display_frame(
+        self,
+        index,
+    ):
         if index < 0:
             return
 
-        if index >= len(self.frames):
+        if index >= len(
+            self.frames
+        ):
             return
 
-        frame = self.frames[index]
-        data = np.asarray(frame["data"])
+        frame = self.frames[
+            index
+        ]
 
-        display_data = np.flipud(data)
+        data = np.asarray(
+            frame["data"]
+        )
+
+        display_data = np.flipud(
+            data
+        )
 
         if self.auto_range_check.isChecked():
-            minimum = float(np.min(display_data))
-            maximum = float(np.max(display_data))
+            minimum = float(
+                np.min(
+                    display_data
+                )
+            )
+            maximum = float(
+                np.max(
+                    display_data
+                )
+            )
         else:
             minimum = float(
                 self.minimum_spin.value()
@@ -539,12 +786,16 @@ class ClientView(QtWidgets.QMainWindow):
             maximum = minimum + 1.0
 
         normalized = (
-            display_data.astype(np.float64)
+            display_data.astype(
+                np.float64
+            )
             - minimum
         )
+
         normalized = normalized / (
             maximum - minimum
         )
+
         normalized = np.clip(
             normalized,
             0.0,
@@ -553,18 +804,28 @@ class ClientView(QtWidgets.QMainWindow):
 
         image_data = (
             normalized * 255.0
-        ).astype(np.uint8)
+        ).astype(
+            np.uint8
+        )
+
         image_data = np.ascontiguousarray(
             image_data
         )
 
-        height, width = image_data.shape
+        height = int(
+            image_data.shape[0]
+        )
+        width = int(
+            image_data.shape[1]
+        )
 
         image = QtGui.QImage(
             image_data.data,
             width,
             height,
-            int(image_data.strides[0]),
+            int(
+                image_data.strides[0]
+            ),
             QtGui.QImage.Format_Grayscale8,
         ).copy()
 
@@ -583,23 +844,35 @@ class ClientView(QtWidgets.QMainWindow):
 
         self._update_frame_label()
 
-        minimum_value = frame.get("minimum")
-        maximum_value = frame.get("maximum")
-        nonzero = frame.get("nonzero")
-
         self.status_label.setText(
             "Frame "
-            + str(index + 1)
+            + str(
+                index + 1
+            )
             + "    min="
-            + str(minimum_value)
+            + str(
+                frame.get(
+                    "minimum"
+                )
+            )
             + "    max="
-            + str(maximum_value)
+            + str(
+                frame.get(
+                    "maximum"
+                )
+            )
             + "    nonzero="
-            + str(nonzero)
+            + str(
+                frame.get(
+                    "nonzero"
+                )
+            )
         )
 
     def _update_frame_label(self):
-        count = len(self.frames)
+        count = len(
+            self.frames
+        )
 
         if count == 0:
             self.frame_label.setText(
@@ -609,21 +882,29 @@ class ClientView(QtWidgets.QMainWindow):
 
         self.frame_label.setText(
             "Frame: "
-            + str(self.current_index + 1)
+            + str(
+                self.current_index + 1
+            )
             + " / "
-            + str(count)
+            + str(
+                count
+            )
         )
 
 
 def main():
-    config = Config("mini_pix.yaml")
+    config = Config(
+        "mini_pix.yaml"
+    )
 
     logger = XLogger(
         log_level=config.LOGGER_LEVEL,
         logger_name=config.CLIENT_LOGGER_NAME,
     )
 
-    app = QtWidgets.QApplication(sys.argv)
+    app = QtWidgets.QApplication(
+        sys.argv
+    )
 
     window = ClientView(
         config,
@@ -631,7 +912,9 @@ def main():
     )
     window.show()
 
-    sys.exit(app.exec_())
+    sys.exit(
+        app.exec_()
+    )
 
 
 if __name__ == "__main__":

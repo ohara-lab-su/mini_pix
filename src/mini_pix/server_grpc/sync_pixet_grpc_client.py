@@ -6,14 +6,11 @@ from grpc_frame import SyncGrpcClient
 from mini_pix.server_grpc.async_pixet_grpc_client import AsyncPixetGrpcClient
 
 
-class SyncPixetGrpcClient(AsyncPixetGrpcClient, SyncGrpcClient):
-    """
-    MiniPixCtrl の同期 gRPC クライアント。
-
-    通常測定結果の TIFF / PNG ローカル保存に対応する。
-    VIEW の逐次表示は AsyncPixetGrpcClient.stream_frames() /
-    stream_integral() を使用する。
-    """
+class SyncPixetGrpcClient(
+    AsyncPixetGrpcClient,
+    SyncGrpcClient,
+):
+    """MiniPIX 用 SyncGrpcClient。"""
 
     def __init__(
         self,
@@ -45,11 +42,6 @@ class SyncPixetGrpcClient(AsyncPixetGrpcClient, SyncGrpcClient):
             grpc_options=grpc_options,
         )
 
-        self._server_ip = server_ip
-        self._server_port = int(server_port)
-        self._stream_timeout_sec = effective_timeout_sec
-        self._grpc_options = grpc_options
-
         self._grpc_acquire_frames = self.acquire_frames
         self._grpc_acquire_integral = self.acquire_integral
 
@@ -60,17 +52,16 @@ class SyncPixetGrpcClient(AsyncPixetGrpcClient, SyncGrpcClient):
         self,
         count: int,
         sec: float,
+        name: str = "frame.tiff",
         *,
-        name: Optional[str] = None,
-        save_local: bool = False,
-        return_data: bool = True,
-        save_format: Optional[str] = None,
-        save_path: Optional[str] = None,
+        save_local: bool = True,
+        return_data: bool = False,
+        save_format=None,
+        save_path=None,
     ):
         result = self._grpc_acquire_frames(
             count,
             sec,
-            callback=None,
             save_format=save_format,
             save_path=save_path,
         )
@@ -86,17 +77,16 @@ class SyncPixetGrpcClient(AsyncPixetGrpcClient, SyncGrpcClient):
         self,
         count: int,
         sec: float,
+        name: str = "integral.tiff",
         *,
-        name: Optional[str] = None,
-        save_local: bool = False,
-        return_data: bool = True,
-        save_format: Optional[str] = None,
-        save_path: Optional[str] = None,
+        save_local: bool = True,
+        return_data: bool = False,
+        save_format=None,
+        save_path=None,
     ):
         result = self._grpc_acquire_integral(
             count,
             sec,
-            callback=None,
             save_format=save_format,
             save_path=save_path,
         )
