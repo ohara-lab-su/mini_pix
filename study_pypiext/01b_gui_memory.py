@@ -92,41 +92,42 @@ settings_label = QLabel(
 
 image_label = QLabel()
 # image_label.setFixedSize(768, 768)  # 画像表示領域を固定する場合
+image_label.setMinimumSize(256, 256)
 image_label.setAlignment(Qt.AlignCenter)
 
 status_label = QLabel("Ready")
 
 range_layout = QHBoxLayout()
 
-range_mode_label = QLabel("Range:")
-
 range_mode = QComboBox()
 range_mode.addItem("Auto")
 range_mode.addItem("Manual")
-
-range_min_label = QLabel("Min:")
 
 range_min = QSpinBox()
 range_min.setRange(-2147483648, 2147483647)
 range_min.setValue(0)
 range_min.setEnabled(False)
 
-range_max_label = QLabel("Max:")
-
 range_max = QSpinBox()
 range_max.setRange(-2147483648, 2147483647)
 range_max.setValue(6)
 range_max.setEnabled(False)
 
-range_value_label = QLabel("Display: Auto")
+interpolation_mode = QComboBox()
+interpolation_mode.addItem("Nearest")
+interpolation_mode.addItem("Smooth")
 
-range_layout.addWidget(range_mode_label)
+range_label = QLabel("Display: Auto")
+
+range_layout.addWidget(QLabel("Range:"))
 range_layout.addWidget(range_mode)
-range_layout.addWidget(range_min_label)
+range_layout.addWidget(QLabel("Min:"))
 range_layout.addWidget(range_min)
-range_layout.addWidget(range_max_label)
+range_layout.addWidget(QLabel("Max:"))
 range_layout.addWidget(range_max)
-range_layout.addWidget(range_value_label)
+range_layout.addWidget(QLabel("Interpolation:"))
+range_layout.addWidget(interpolation_mode)
+range_layout.addWidget(range_label)
 
 start_button = QPushButton("Start")
 
@@ -161,7 +162,6 @@ def show_image():
         return
 
     display = last_data.astype(np.float64).copy()
-
     display[display < view_min] = view_min
     display[display > view_max] = view_max
 
@@ -181,24 +181,30 @@ def show_image():
 
     pixmap = QPixmap.fromImage(image)
 
+    if interpolation_mode.currentText() == "Nearest":
+        transform_mode = Qt.FastTransformation
+    else:
+        transform_mode = Qt.SmoothTransformation
+
+    # 元の検出器画像は常に 256 x 256 pixel。
+    # GUI表示時のみ、ウィンドウ内の画像領域へ縦横比を維持してスケールする。
     pixmap = pixmap.scaled(
-        image_label.width(),
-        image_label.height(),
+        image_label.size(),
         Qt.KeepAspectRatio,
-        Qt.FastTransformation,
+        transform_mode,
     )
 
     image_label.setPixmap(pixmap)
 
     if range_mode.currentText() == "Auto":
-        range_value_label.setText(
+        range_label.setText(
             "Display: Auto  Min="
             + str(view_min)
             + "  Max="
             + str(view_max)
         )
     else:
-        range_value_label.setText(
+        range_label.setText(
             "Display: Manual  Min="
             + str(view_min)
             + "  Max="
@@ -217,13 +223,25 @@ def range_mode_changed():
     show_image()
 
 
-def range_changed():
+def display_changed():
     show_image()
 
 
 range_mode.currentIndexChanged.connect(range_mode_changed)
-range_min.valueChanged.connect(range_changed)
-range_max.valueChanged.connect(range_changed)
+range_min.valueChanged.connect(display_changed)
+range_max.valueChanged.connect(display_changed)
+interpolation_mode.currentIndexChanged.connect(display_changed)
+
+
+original_resize_event = window.resizeEvent
+
+
+def resize_event(event):
+    original_resize_event(event)
+    show_image()
+
+
+window.resizeEvent = resize_event
 
 
 # ------------------------------------------------------------
