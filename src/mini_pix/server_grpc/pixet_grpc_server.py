@@ -129,12 +129,8 @@ def pixet_grpc_server(
         if log_level is None:
             log_level = "INFO"
 
-        logging.basicConfig(
-            level=log_level.upper()
-        )
-        logger = logging.getLogger(
-            __name__
-        )
+        logging.basicConfig(level=log_level.upper())
+        logger = logging.getLogger(__name__)
 
     ctrl = MiniPixCtrl(
         logger=logger,
@@ -144,9 +140,7 @@ def pixet_grpc_server(
     if auto_connect:
         ctrl.connect()
 
-    stream_obj = _MiniPixStream(
-        ctrl
-    )
+    stream_obj = _MiniPixStream(ctrl)
 
     server = create_grpc_server(
         ctrl_obj=ctrl,
@@ -156,61 +150,34 @@ def pixet_grpc_server(
         max_workers=10,
     )
 
-    bind_addr = (
-        str(grpc_host)
-        + ":"
-        + str(grpc_port)
-    )
+    bind_addr = str(grpc_host) + ":" + str(grpc_port)
 
-    ret = server.add_insecure_port(
-        bind_addr
-    )
+    ret = server.add_insecure_port(bind_addr)
     if ret == 0:
-        raise RuntimeError(
-            "bind failed: "
-            + bind_addr
-        )
+        raise RuntimeError("bind failed: " + bind_addr)
 
-    logger.info(
-        "gRPC bind OK: "
-        + bind_addr
-    )
+    logger.info("gRPC bind OK: " + bind_addr)
 
     server.start()
 
-    ch = grpc.insecure_channel(
-        bind_addr
-    )
-    channel_ready_future(
-        ch
-    ).result(
-        timeout=2.0
-    )
+    ch = grpc.insecure_channel(bind_addr)
+    channel_ready_future(ch).result(timeout=2.0)
+
     ch.close()
 
-    logger.info(
-        "gRPC self-check OK"
-    )
+    logger.info("gRPC self-check OK")
 
     try:
         while True:
-            time.sleep(
-                1
-            )
+            time.sleep(1)
 
     except KeyboardInterrupt:
-        logger.info(
-            "KeyboardInterrupt"
-        )
+        logger.info("KeyboardInterrupt")
 
     finally:
-        server.stop(
-            grace=None
-        )
+        server.stop(grace=None)
 
-        logger.info(
-            "gRPC server stopped"
-        )
+        logger.info("gRPC server stopped")
 
         try:
             ctrl.disconnect()

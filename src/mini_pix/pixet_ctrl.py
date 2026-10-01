@@ -202,15 +202,11 @@ class MiniPixCtrl:
 
         if mode not in mode_map:
             self._logger.error(
-                'Invalid mode: '
-                + str(mode)
-                + '. Use "Counting", "Energy", or "Time".'
+                "Invalid mode: " + str(mode) + '. Use "Counting", "Energy", or "Time".'
             )
             return False
 
-        rc = self._pixcfg.setModeAll(
-            mode_map[mode]
-        )
+        rc = self._pixcfg.setModeAll(mode_map[mode])
 
         if rc != 0:
             self._logger.error(
@@ -263,9 +259,7 @@ class MiniPixCtrl:
     ) -> bool:
         self._require_connected()
 
-        rc = self._dev.setTimepixClock(
-            clock_mhz
-        )
+        rc = self._dev.setTimepixClock(clock_mhz)
 
         if rc != 0:
             self._logger.error(
@@ -284,16 +278,11 @@ class MiniPixCtrl:
     ) -> bool:
         self._require_connected()
 
-        rc = self._dev.setBias(
-            bias_volt
-        )
+        rc = self._dev.setBias(bias_volt)
 
         if rc != 0:
             self._logger.error(
-                "setBias failed: rc="
-                + str(rc)
-                + ", err="
-                + str(self._dev.lastError())
+                "setBias failed: rc=" + str(rc) + ", err=" + str(self._dev.lastError())
             )
             return False
 
@@ -320,12 +309,11 @@ class MiniPixCtrl:
             except Exception:
                 pass
 
-        side = int(data_len ** 0.5)
+        side = int(data_len**0.5)
 
         if side * side != data_len:
             raise RuntimeError(
-                "cannot infer frame size from pixel count: "
-                + str(data_len)
+                "cannot infer frame size from pixel count: " + str(data_len)
             )
 
         return side, side
@@ -337,15 +325,11 @@ class MiniPixCtrl:
         frame_name = "frame"
 
         try:
-            frame_name = str(
-                frame.frameName()
-            )
+            frame_name = str(frame.frameName())
         except Exception:
             pass
 
-        raw_data = np.asarray(
-            frame.data()
-        ).copy()
+        raw_data = np.asarray(frame.data()).copy()
 
         width, height = self.get_frame_size(
             frame,
@@ -369,9 +353,7 @@ class MiniPixCtrl:
         }
 
         try:
-            subframes = list(
-                frame.subFrames()
-            )
+            subframes = list(frame.subFrames())
         except Exception:
             subframes = []
 
@@ -380,15 +362,11 @@ class MiniPixCtrl:
                 sub_name = "subframe"
 
                 try:
-                    sub_name = str(
-                        sub.frameName()
-                    )
+                    sub_name = str(sub.frameName())
                 except Exception:
                     pass
 
-                sub_raw_data = np.asarray(
-                    sub.data()
-                ).copy()
+                sub_raw_data = np.asarray(sub.data()).copy()
 
                 sub_width, sub_height = self.get_frame_size(
                     sub,
@@ -421,14 +399,10 @@ class MiniPixCtrl:
         self,
         index: int,
     ) -> Dict[str, Any]:
-        frame = self._dev.acqFrameRefInc(
-            index
-        )
+        frame = self._dev.acqFrameRefInc(index)
 
         try:
-            return self._frame_to_dict(
-                frame
-            )
+            return self._frame_to_dict(frame)
         finally:
             try:
                 frame.destroy()
@@ -441,9 +415,7 @@ class MiniPixCtrl:
         frame = self._dev.lastAcqFrameRefInc()
 
         try:
-            return self._frame_to_dict(
-                frame
-            )
+            return self._frame_to_dict(frame)
         finally:
             try:
                 frame.destroy()
@@ -454,15 +426,11 @@ class MiniPixCtrl:
         self,
         frame: Dict[str, Any],
     ):
-        self._frames.append(
-            frame
-        )
+        self._frames.append(frame)
         self._current_frame = frame
 
         with self._state_lock:
-            self._finished_count = len(
-                self._frames
-            )
+            self._finished_count = len(self._frames)
 
     # ------------------------------------------------------------
     # メモリ上の測定結果
@@ -473,24 +441,18 @@ class MiniPixCtrl:
         self._current_frame = None
 
     def get_frame_count(self) -> int:
-        return len(
-            self._frames
-        )
+        return len(self._frames)
 
     def get_frame(
         self,
         index: int,
     ) -> Dict[str, Any]:
-        return self._frames[
-            index
-        ]
+        return self._frames[index]
 
     def get_frames(
         self,
     ) -> List[Dict[str, Any]]:
-        return list(
-            self._frames
-        )
+        return list(self._frames)
 
     def get_current_frame(
         self,
@@ -501,9 +463,7 @@ class MiniPixCtrl:
     def get_acq_frame_count(self) -> int:
         self._require_connected()
 
-        return int(
-            self._dev.acqFrameCount()
-        )
+        return int(self._dev.acqFrameCount())
 
     def get_acq_frames(
         self,
@@ -516,21 +476,11 @@ class MiniPixCtrl:
         if idx is None:
             frame_count = self.get_acq_frame_count()
 
-            for frame_index in range(
-                frame_count
-            ):
-                frames.append(
-                    self._read_frame_at(
-                        frame_index
-                    )
-                )
+            for frame_index in range(frame_count):
+                frames.append(self._read_frame_at(frame_index))
         else:
             frame_count = 1
-            frames.append(
-                self._read_frame_at(
-                    idx
-                )
-            )
+            frames.append(self._read_frame_at(idx))
 
         return {
             "frame_count": frame_count,
@@ -548,9 +498,7 @@ class MiniPixCtrl:
         if save_format is None:
             return "NONE"
 
-        value = str(
-            save_format
-        ).strip().upper()
+        value = str(save_format).strip().upper()
 
         if value == "":
             return "NONE"
@@ -565,9 +513,7 @@ class MiniPixCtrl:
         save_format: Optional[str],
         save_path: Optional[str],
     ) -> Tuple[str, str]:
-        normalized = self._normalize_save_format(
-            save_format
-        )
+        normalized = self._normalize_save_format(save_format)
 
         supported = {
             "NONE",
@@ -577,23 +523,16 @@ class MiniPixCtrl:
         }
 
         if normalized not in supported:
-            raise ValueError(
-                "Unsupported save_format: "
-                + str(save_format)
-            )
+            raise ValueError("Unsupported save_format: " + str(save_format))
 
         path = ""
 
         if save_path is not None:
-            path = str(
-                save_path
-            )
+            path = str(save_path)
 
         if normalized != "NONE":
             if path == "":
-                raise ValueError(
-                    "save_path is required when saving is enabled"
-                )
+                raise ValueError("save_path is required when saving is enabled")
 
         return normalized, path
 
@@ -610,9 +549,7 @@ class MiniPixCtrl:
 
         filename = os.path.join(
             directory,
-            "frame_"
-            + str(frame_index + 1).zfill(6)
-            + ".tiff",
+            "frame_" + str(frame_index + 1).zfill(6) + ".tiff",
         )
 
         tifffile.imwrite(
@@ -624,11 +561,7 @@ class MiniPixCtrl:
         self,
         filename: str,
     ):
-        parent = os.path.dirname(
-            os.path.abspath(
-                filename
-            )
-        )
+        parent = os.path.dirname(os.path.abspath(filename))
 
         if parent != "":
             os.makedirs(
@@ -671,13 +604,9 @@ class MiniPixCtrl:
                 dtype=data.dtype,
             )
 
-        dataset = h5_file[
-            "frames"
-        ]
+        dataset = h5_file["frames"]
 
-        frame_index = int(
-            dataset.shape[0]
-        )
+        frame_index = int(dataset.shape[0])
 
         dataset.resize(
             frame_index + 1,
@@ -748,18 +677,13 @@ class MiniPixCtrl:
         """
         self._require_connected()
 
-        acquisition = str(
-            acquisition_type
-        ).strip().lower()
+        acquisition = str(acquisition_type).strip().lower()
 
         if acquisition not in {
             "frames",
             "integral",
         }:
-            raise ValueError(
-                "acquisition_type must be "
-                '"frames" or "integral"'
-            )
+            raise ValueError("acquisition_type must be " '"frames" or "integral"')
 
         normalized_save_format, normalized_save_path = self._prepare_save(
             save_format,
@@ -770,9 +694,7 @@ class MiniPixCtrl:
 
         with self._state_lock:
             self._state = "running"
-            self._requested_count = int(
-                count
-            )
+            self._requested_count = int(count)
             self._finished_count = 0
             self._last_error = None
 
@@ -787,9 +709,7 @@ class MiniPixCtrl:
             pixet_file_name = normalized_save_path
 
         if normalized_save_format == "HDF5":
-            h5_file = self._open_hdf5(
-                normalized_save_path
-            )
+            h5_file = self._open_hdf5(normalized_save_path)
 
         try:
             if acquisition == "frames":
@@ -805,16 +725,13 @@ class MiniPixCtrl:
                     need_event = True
 
                 if need_event:
+
                     def acquisition_finished(_finished_count):
                         frame = self._read_last_frame()
 
-                        self._store_frame(
-                            frame
-                        )
+                        self._store_frame(frame)
 
-                        frame_index = len(
-                            self._frames
-                        ) - 1
+                        frame_index = len(self._frames) - 1
 
                         if normalized_save_format == "TIFF":
                             self._save_tiff_frame(
@@ -830,9 +747,7 @@ class MiniPixCtrl:
                             )
 
                         if callback is not None:
-                            callback(
-                                frame
-                            )
+                            callback(frame)
 
                     self._event_callback = acquisition_finished
 
@@ -856,26 +771,15 @@ class MiniPixCtrl:
                     pixet_file_name,
                 )
 
-                self._logger.info(
-                    "doSimpleAcquisition end: rc="
-                    + str(rc)
-                )
+                self._logger.info("doSimpleAcquisition end: rc=" + str(rc))
 
                 if not need_event:
-                    frame_count = int(
-                        self._dev.acqFrameCount()
-                    )
+                    frame_count = int(self._dev.acqFrameCount())
 
-                    for frame_index in range(
-                        frame_count
-                    ):
-                        frame = self._read_frame_at(
-                            frame_index
-                        )
+                    for frame_index in range(frame_count):
+                        frame = self._read_frame_at(frame_index)
 
-                        self._store_frame(
-                            frame
-                        )
+                        self._store_frame(frame)
 
                 if rc != 0:
                     with self._state_lock:
@@ -904,22 +808,15 @@ class MiniPixCtrl:
                     pixet_file_name,
                 )
 
-                self._logger.info(
-                    "doSimpleIntegralAcquisition end: rc="
-                    + str(rc)
-                )
+                self._logger.info("doSimpleIntegralAcquisition end: rc=" + str(rc))
 
                 if rc == 0:
-                    frame_count = int(
-                        self._dev.acqFrameCount()
-                    )
+                    frame_count = int(self._dev.acqFrameCount())
 
                     if frame_count > 0:
                         frame = self._read_last_frame()
 
-                        self._store_frame(
-                            frame
-                        )
+                        self._store_frame(frame)
 
                         if normalized_save_format == "TIFF":
                             self._save_tiff_frame(
@@ -935,14 +832,10 @@ class MiniPixCtrl:
                             )
 
                         if callback is not None:
-                            callback(
-                                frame
-                            )
+                            callback(frame)
 
                     with self._state_lock:
-                        self._finished_count = int(
-                            count
-                        )
+                        self._finished_count = int(count)
 
                 else:
                     with self._state_lock:
@@ -966,9 +859,7 @@ class MiniPixCtrl:
             result = {
                 "rc": int(rc),
                 "acquisition_type": acquisition,
-                "frame_count": len(
-                    self._frames
-                ),
+                "frame_count": len(self._frames),
                 "frames": self.get_frames(),
                 "saved_file": pixet_file_name,
             }
@@ -984,9 +875,7 @@ class MiniPixCtrl:
         except Exception as error:
             with self._state_lock:
                 self._state = "error"
-                self._last_error = str(
-                    error
-                )
+                self._last_error = str(error)
 
             raise
 
@@ -1070,17 +959,13 @@ class MiniPixCtrl:
         if not self._connected:
             return False
 
-        return bool(
-            self._dev.isAcquisitionRunning()
-        )
+        return bool(self._dev.isAcquisitionRunning())
 
     def is_aborting(self) -> bool:
         if not self._connected:
             return False
 
-        return bool(
-            self._dev.isAcquisitionAborting()
-        )
+        return bool(self._dev.isAcquisitionAborting())
 
     def state(self) -> Dict[str, Any]:
         if not self._connected:
@@ -1100,12 +985,8 @@ class MiniPixCtrl:
                 "last_error": last_error,
             }
 
-        running = bool(
-            self._dev.isAcquisitionRunning()
-        )
-        aborting = bool(
-            self._dev.isAcquisitionAborting()
-        )
+        running = bool(self._dev.isAcquisitionRunning())
+        aborting = bool(self._dev.isAcquisitionAborting())
 
         with self._state_lock:
             state = self._state
