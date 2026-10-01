@@ -16,7 +16,8 @@ from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
     QPushButton,
-    QSlider,
+    QComboBox,
+    QSpinBox,
     QHBoxLayout,
     QVBoxLayout,
     QWidget,
@@ -97,15 +98,35 @@ status_label = QLabel("Ready")
 
 range_layout = QHBoxLayout()
 
-range_label = QLabel("View Max: 1")
+range_mode_label = QLabel("Range:")
 
-range_slider = QSlider(Qt.Horizontal)
-range_slider.setMinimum(1)
-range_slider.setMaximum(100)
-range_slider.setValue(1)
+range_mode = QComboBox()
+range_mode.addItem("Auto")
+range_mode.addItem("Manual")
 
-range_layout.addWidget(range_label)
-range_layout.addWidget(range_slider)
+range_min_label = QLabel("Min:")
+
+range_min = QSpinBox()
+range_min.setRange(-2147483648, 2147483647)
+range_min.setValue(0)
+range_min.setEnabled(False)
+
+range_max_label = QLabel("Max:")
+
+range_max = QSpinBox()
+range_max.setRange(-2147483648, 2147483647)
+range_max.setValue(6)
+range_max.setEnabled(False)
+
+range_value_label = QLabel("Display: Auto")
+
+range_layout.addWidget(range_mode_label)
+range_layout.addWidget(range_mode)
+range_layout.addWidget(range_min_label)
+range_layout.addWidget(range_min)
+range_layout.addWidget(range_max_label)
+range_layout.addWidget(range_max)
+range_layout.addWidget(range_value_label)
 
 start_button = QPushButton("Start")
 
@@ -129,16 +150,24 @@ def show_image():
     if last_data is None:
         return
 
-    view_max = range_slider.value()
+    if range_mode.currentText() == "Auto":
+        view_min = float(last_data.min())
+        view_max = float(last_data.max())
+    else:
+        view_min = float(range_min.value())
+        view_max = float(range_max.value())
+
+    if view_max <= view_min:
+        return
 
     display = last_data.astype(np.float64).copy()
 
-    display[display < 0] = 0
+    display[display < view_min] = view_min
     display[display > view_max] = view_max
 
     display = (
-        display
-        / float(view_max)
+        (display - view_min)
+        / (view_max - view_min)
         * 255.0
     ).astype(np.uint8)
 
@@ -161,16 +190,40 @@ def show_image():
 
     image_label.setPixmap(pixmap)
 
-    range_label.setText(
-        "View Max: " + str(view_max)
-    )
+    if range_mode.currentText() == "Auto":
+        range_value_label.setText(
+            "Display: Auto  Min="
+            + str(view_min)
+            + "  Max="
+            + str(view_max)
+        )
+    else:
+        range_value_label.setText(
+            "Display: Manual  Min="
+            + str(view_min)
+            + "  Max="
+            + str(view_max)
+        )
+
+
+def range_mode_changed():
+    if range_mode.currentText() == "Auto":
+        range_min.setEnabled(False)
+        range_max.setEnabled(False)
+    else:
+        range_min.setEnabled(True)
+        range_max.setEnabled(True)
+
+    show_image()
 
 
 def range_changed():
     show_image()
 
 
-range_slider.valueChanged.connect(range_changed)
+range_mode.currentIndexChanged.connect(range_mode_changed)
+range_min.valueChanged.connect(range_changed)
+range_max.valueChanged.connect(range_changed)
 
 
 # ------------------------------------------------------------
@@ -211,16 +264,6 @@ def acquire():
     minimum = data.min()
     maximum = data.max()
     nonzero = np.count_nonzero(data)
-
-    # 実データの最大値に合わせて
-    # View Max スライダーの範囲を広げる
-    slider_max = int(maximum)
-
-    if slider_max < 10:
-        slider_max = 10
-
-    if slider_max > range_slider.maximum():
-        range_slider.setMaximum(slider_max)
 
     show_image()
 
