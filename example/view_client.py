@@ -507,50 +507,19 @@ class ClientView(QtWidgets.QMainWindow):
                 9.66667
             )
 
-            subscription = client.subscribe(
-                TOPIC_NAME
-            )
-
-            async def receive_frames():
-                async for event in subscription:
-                    payload = event
-
-                    if isinstance(
-                        event,
-                        dict,
-                    ):
-                        if "payload" in event:
-                            payload = event["payload"]
-
-                    self.signals.frame_received.emit(
-                        payload
-                    )
-
-            receive_task = asyncio.create_task(
-                receive_frames()
-            )
+            stream_method = "acquire_frames"
 
             if acquisition_type == "Integral":
-                await client.acquire_integral(
-                    count,
-                    sec,
-                    save_local=False,
-                    return_data=False,
-                )
-            else:
-                await client.acquire_frames(
-                    count,
-                    sec,
-                    save_local=False,
-                    return_data=False,
-                )
+                stream_method = "acquire_integral"
 
-            receive_task.cancel()
-
-            try:
-                await receive_task
-            except asyncio.CancelledError:
-                pass
+            for frame in client.stream_call(
+                stream_method,
+                count,
+                sec,
+            ):
+                self.signals.frame_received.emit(
+                    frame
+                )
 
         finally:
             try:
