@@ -4,8 +4,6 @@
 
 from mini_pix.server_grpc.async_pixet_grpc_client import AsyncPixetGrpcClient
 from mini_pix.server_grpc.sync_pixet_grpc_client import SyncPixetGrpcClient
-from mini_pix.server_grpc.pixet_grpc_server import pixet_grpc_server
-from mini_pix.server_grpc.pixet_grpc_server import pixet_server
 
 from grpc_frame import DeviceProxy, register_device_proxy
 
@@ -26,6 +24,26 @@ register_device_proxy(
     default_async_mode=False,
     aliases=DEVICE_PROXY_ALIASES,
 )
+
+
+def __getattr__(name):
+    """サーバー実装は必要になった時だけ読み込む。
+
+    client-only 環境では pypixet を import しない。
+    """
+    if name == "pixet_grpc_server":
+        from mini_pix.server_grpc.pixet_grpc_server import pixet_grpc_server
+
+        return pixet_grpc_server
+
+    if name == "pixet_server":
+        from mini_pix.server_grpc.pixet_grpc_server import pixet_server
+
+        return pixet_server
+
+    raise AttributeError(
+        "module {!r} has no attribute {!r}".format(__name__, name)
+    )
 
 
 __all__ = [

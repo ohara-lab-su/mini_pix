@@ -1,0 +1,108 @@
+"""
+測定プログラムの基本テスト1
+"""
+######################################################
+import os
+import site
+
+pixet_dir = r"C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64"
+
+# Python 3.7 では add_dll_directory は使えないため PATH を変更
+os.environ["PATH"] = pixet_dir + ";" + os.environ["PATH"]
+site.addsitedir(pixet_dir)  # .pyd を import 可能にする
+######################################################
+import pypixet
+
+print("pixet core init...")
+
+# Piext core の起動
+pypixet.start()
+# Pixet core のハンドル（メインオブジェクト）を取得
+pixet = pypixet.pixet
+
+# もし、 pixet.devices() だと全デバイス
+# TPX3 デバイスのみ取得。
+# pixet.deviceByName(name)
+#   --> GUI で表示されるデバイス名の指定
+# devices = pixet.devicesByType(pixet.PX_DEVTYPE_TPX3)
+devices = pixet.devices()
+
+if len(devices) == 0:
+    raise RuntimeError("No devices found")
+
+dev = devices[0]
+
+print("device:")
+print("  fullName :", dev.fullName())
+print("  deviceType:", dev.deviceType())
+print("  chipType  :", dev.chipType())
+
+# --- DevInfo ---
+di = pixet.DevInfo()
+rc = dev.deviceInfo(di)
+
+print("DevInfo:")
+print("  rc     :", rc)
+print("  name   :", di.name)
+print("  serial :", di.serial)
+print("  type   :", di.type)
+print("  vendor :", di.vendor)
+
+# ==========================================================
+# Timepix (Mpx2) は setOperationMode を使わない
+# → pixel configuration で mode を設定
+# dev.setOperationMode(pixet.PX_TPX3_OPM_EVENT_ITOT)
+# ==========================================================
+
+# 各ピクセルに展開される行列設定
+# mode, mask, pixel ごとの threshoild correction
+pixcfg = dev.pixCfg()
+
+pixcfg.setModeAll(
+    # DAC 一覧
+    # 全pixelを ToT モードに設定
+    # 0 COUNT 一定時間内にヒットした回数（カウント数）を記録
+    # 1 TOT (Time Over Threshold) しきい値を超えていた時間幅を記録 → エネルギーに比例
+    # 2 TOA (Time Of Arrival) しきい値を超えた時刻を記録
+    # 3 ONEHIT 最初の1ヒットのみ記録
+    pixet.PX_TPXMODE_TOT,
+)
+
+# デバイス全体の設定と測定実行
+dev.setThreshold(
+    0,  # chip chip index（通常 0）
+    5.0,  # value threshold
+    pixet.PX_THLFLG_ENERGY,  # flag 単位指定
+)
+
+# 同一条件で5回測定し、各画像を別ファイルとして保存する
+for i in range(1, 6):
+    filename = f"example_{i}.png"
+
+    print(f"dev.doSimpleAcquisition ({i}/5, 1 frame @ 1 sec) - start")
+    rc = dev.doSimpleAcquisition(
+        1,  # count (Acqの回数=フレーム数)
+        1,  # 測定時間
+        pixet.PX_FTYPE_AUTODETECT,  # 保存形式
+        filename,  # ファイル名
+    )
+    print(
+        f"dev.doSimpleAcquisition ({i}/5) - end:",
+        rc,
+        "(0 is OK)",
+        filename,
+    )
+
+# pixet.PX_FTYPE_PNG
+# pixet.PX_FTYPE_TPX3_PIXELS
+# pixet.PX_FTYPE_BINARY_FRAME
+# pixet.PX_FTYPE_NONE
+
+# using only for old pxcore versions up-to 1.8.3
+# - save settings, correct stop devices and core exit
+# - use both lines
+# pixet.exitPixet()
+
+# some USB devices must be power cycled
+# if it not used / important if third-party debug environment used
+pypixet.exit()

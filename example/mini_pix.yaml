@@ -1,0 +1,10 @@
+# --- mini-pix-server
+SERVER_IP: "10.170.10.38"
+SERVER_PORT: 50051
+CLIENT_LOGGER_NAME: "mini_pix_client"
+SERVER_LOGGER_NAME: "mini_pix_server"
+TIMEOUT: 30.0
+LOGGER_LEVEL: "debug"
+
+# --- mini-pix-client
+ASYNC_MODE: false
