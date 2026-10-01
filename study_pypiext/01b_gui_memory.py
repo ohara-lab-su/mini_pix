@@ -19,6 +19,8 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QSpinBox,
     QSizePolicy,
+    QGraphicsView,
+    QGraphicsScene,
     QHBoxLayout,
     QVBoxLayout,
     QWidget,
@@ -91,14 +93,22 @@ settings_label = QLabel(
     f"Clock: {CLOCK} MHz"
 )
 
-image_label = QLabel()
-# image_label.setFixedSize(768, 768)  # 画像表示領域を固定する場合
+image_label = QGraphicsView()
+
+# 画像表示領域を固定する場合
+# image_label.setFixedSize(768, 768)
+
 image_label.setMinimumSize(256, 256)
 image_label.setSizePolicy(
-    QSizePolicy.Ignored,
-    QSizePolicy.Ignored,
+    QSizePolicy.Expanding,
+    QSizePolicy.Expanding,
 )
 image_label.setAlignment(Qt.AlignCenter)
+image_label.setFrameShape(QGraphicsView.NoFrame)
+
+image_scene = QGraphicsScene()
+image_label.setScene(image_scene)
+image_item = None
 
 status_label = QLabel("Ready")
 
@@ -137,7 +147,7 @@ range_layout.addWidget(range_label)
 start_button = QPushButton("Start")
 
 layout.addWidget(settings_label)
-layout.addWidget(image_label)
+layout.addWidget(image_label, 1)
 layout.addWidget(status_label)
 layout.addLayout(range_layout)
 layout.addWidget(start_button)
@@ -153,6 +163,8 @@ last_data = None
 
 
 def show_image():
+    global image_item
+
     if last_data is None:
         return
 
@@ -166,7 +178,9 @@ def show_image():
     if view_max <= view_min:
         return
 
-    display = last_data.astype(np.float64).copy()
+    # PIXet GUI と同じ上下方向に合わせる。
+    display = np.flipud(last_data).astype(np.float64).copy()
+
     display[display < view_min] = view_min
     display[display > view_max] = view_max
 
@@ -186,20 +200,22 @@ def show_image():
 
     pixmap = QPixmap.fromImage(image)
 
-    if interpolation_mode.currentText() == "Nearest":
-        transform_mode = Qt.FastTransformation
+    if image_item is None:
+        image_item = image_scene.addPixmap(pixmap)
     else:
-        transform_mode = Qt.SmoothTransformation
+        image_item.setPixmap(pixmap)
 
-    # 元の検出器画像は常に 256 x 256 pixel。
-    # GUI表示時のみ、ウィンドウ内の画像領域へ縦横比を維持してスケールする。
-    pixmap = pixmap.scaled(
-        image_label.size(),
+    if interpolation_mode.currentText() == "Nearest":
+        image_item.setTransformationMode(Qt.FastTransformation)
+    else:
+        image_item.setTransformationMode(Qt.SmoothTransformation)
+
+    image_scene.setSceneRect(image_item.boundingRect())
+
+    image_label.fitInView(
+        image_item,
         Qt.KeepAspectRatio,
-        transform_mode,
     )
-
-    image_label.setPixmap(pixmap)
 
     if range_mode.currentText() == "Auto":
         range_label.setText(
@@ -243,7 +259,12 @@ original_image_resize_event = image_label.resizeEvent
 
 def image_resize_event(event):
     original_image_resize_event(event)
-    show_image()
+
+    if image_item is not None:
+        image_label.fitInView(
+            image_item,
+            Qt.KeepAspectRatio,
+        )
 
 
 image_label.resizeEvent = image_resize_event
