@@ -276,8 +276,8 @@ status_label = QLabel(
 
 frame_layout = QHBoxLayout()
 
-frame_label = QLabel(
-    "Frame: - / -"
+previous_button = QPushButton(
+    "<"
 )
 
 frame_slider = QSlider(
@@ -288,11 +288,29 @@ frame_slider.setMaximum(0)
 frame_slider.setValue(0)
 frame_slider.setEnabled(False)
 
+next_button = QPushButton(
+    ">"
+)
+
+frame_label = QLabel(
+    "Frame: - / -"
+)
+frame_label.setAlignment(
+    Qt.AlignCenter
+)
+
 frame_layout.addWidget(
-    frame_label
+    previous_button
 )
 frame_layout.addWidget(
-    frame_slider
+    frame_slider,
+    1,
+)
+frame_layout.addWidget(
+    next_button
+)
+frame_layout.addWidget(
+    frame_label
 )
 
 range_layout = QHBoxLayout()
@@ -532,6 +550,17 @@ def show_frame(index):
         + str(len(acquired_frames))
     )
 
+    if frame_slider.value() != current_frame_index:
+        frame_slider.blockSignals(
+            True
+        )
+        frame_slider.setValue(
+            current_frame_index
+        )
+        frame_slider.blockSignals(
+            False
+        )
+
     status_label.setText(
         "Frame: "
         + str(current_frame_index + 1)
@@ -548,7 +577,25 @@ def show_frame(index):
     show_image()
 
 
-def frame_changed(value):
+def show_previous_frame():
+    if current_frame_index <= 0:
+        return
+
+    show_frame(
+        current_frame_index - 1
+    )
+
+
+def show_next_frame():
+    if current_frame_index >= len(acquired_frames) - 1:
+        return
+
+    show_frame(
+        current_frame_index + 1
+    )
+
+
+def frame_slider_changed(value):
     show_frame(
         value
     )
@@ -583,7 +630,6 @@ def start():
     frame_slider.setEnabled(
         False
     )
-
     frame_slider.setMinimum(0)
     frame_slider.setMaximum(0)
     frame_slider.setValue(0)
@@ -606,7 +652,7 @@ def start():
     )
 
     status_label.setText(
-        "Acquiring..."
+        "Acquiring...  撮像中"
     )
 
     QApplication.processEvents()
@@ -711,8 +757,16 @@ interpolation_mode.currentIndexChanged.connect(
     display_changed
 )
 
+previous_button.clicked.connect(
+    show_previous_frame
+)
+
+next_button.clicked.connect(
+    show_next_frame
+)
+
 frame_slider.valueChanged.connect(
-    frame_changed
+    frame_slider_changed
 )
 
 start_button.clicked.connect(
