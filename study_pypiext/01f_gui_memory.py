@@ -59,6 +59,11 @@ class MiniPIX:
         self.dev = None
         self._started = False
         self._event_callback = None
+        self._state_lock = threading.Lock()
+        self._state = "idle"
+        self._requested_count = 0
+        self._finished_count = 0
+        self._last_error = None
 
         try:
             pypixet.start()
@@ -173,11 +178,17 @@ class MiniPIX:
         frames = []
 
         if callback is not None:
-            def acquisition_finished(_count):
+            def acquisition_finished(finished_count):
                 result = self._read_last_frame()
                 frames.append(
                     result
                 )
+
+                with self._state_lock:
+                    self._finished_count = int(
+                        finished_count
+                    )
+
                 callback(
                     result
                 )
@@ -190,6 +201,12 @@ class MiniPIX:
                 self._event_callback,
             )
 
+        with self._state_lock:
+            self._state = "running"
+            self._requested_count = count
+            self._finished_count = 0
+            self._last_error = None
+
         try:
             rc = self.dev.doSimpleAcquisition(
                 count,
@@ -199,17 +216,48 @@ class MiniPIX:
             )
 
             if rc != 0:
-                raise RuntimeError(
-                    "Acquisition error: " + str(rc)
+                running = bool(
+                    self.dev.isAcquisitionRunning()
+                )
+                aborting = bool(
+                    self.dev.isAcquisitionAborting()
                 )
 
+                with self._state_lock:
+                    if aborting:
+                        self._state = "aborting"
+                    else:
+                        self._state = "stopped"
+
+                if running:
+                    raise RuntimeError(
+                        "Acquisition error: " + str(rc)
+                    )
+
             if callback is None:
-                for index in range(count):
+                frame_count = self.dev.acqFrameCount()
+
+                for index in range(frame_count):
                     frames.append(
                         self._read_frame_at(
                             index
                         )
                     )
+
+                with self._state_lock:
+                    self._finished_count = frame_count
+
+            with self._state_lock:
+                if self._state == "running":
+                    self._state = "finished"
+
+        except Exception as error:
+            with self._state_lock:
+                self._state = "error"
+                self._last_error = str(
+                    error
+                )
+            raise
 
         finally:
             if self._event_callback is not None:
@@ -222,8 +270,82 @@ class MiniPIX:
 
         return frames
 
+    def stop(self):
+        """
+        実行中の測定停止を要求する。
+        PIXet API の abortOperation() を使用する。
+        """
+        if not self._started:
+            return
+
+        if not self.dev.isAcquisitionRunning():
+            return
+
+        with self._state_lock:
+            self._state = "aborting"
+
+        self.dev.abortOperation()
+
+    def state(self):
+        """
+        現在の測定状態を dict で返す。
+        """
+        if not self._started:
+            return {
+                "state": "closed",
+                "running": False,
+                "aborting": False,
+                "requested_count": self._requested_count,
+                "finished_count": self._finished_count,
+                "frame_count": 0,
+                "last_error": self._last_error,
+            }
+
+        running = bool(
+            self.dev.isAcquisitionRunning()
+        )
+        aborting = bool(
+            self.dev.isAcquisitionAborting()
+        )
+        frame_count = self.dev.acqFrameCount()
+
+        with self._state_lock:
+            state = self._state
+            requested_count = self._requested_count
+            finished_count = self._finished_count
+            last_error = self._last_error
+
+        return {
+            "state": state,
+            "running": running,
+            "aborting": aborting,
+            "requested_count": requested_count,
+            "finished_count": finished_count,
+            "frame_count": frame_count,
+            "last_error": last_error,
+        }
+
+    def is_running(self):
+        if not self._started:
+            return False
+
+        return bool(
+            self.dev.isAcquisitionRunning()
+        )
+
+    def is_aborting(self):
+        if not self._started:
+            return False
+
+        return bool(
+            self.dev.isAcquisitionAborting()
+        )
+
     def close(self):
         if self._started:
+            if self.dev.isAcquisitionRunning():
+                self.stop()
+
             pypixet.exit()
             self._started = False
 
@@ -502,6 +624,21 @@ class MainWindow(QWidget):
             "Start"
         )
 
+        self.stop_button = QPushButton(
+            "Stop"
+        )
+        self.stop_button.setEnabled(
+            False
+        )
+
+        acquisition_button_layout = QHBoxLayout()
+        acquisition_button_layout.addWidget(
+            self.start_button
+        )
+        acquisition_button_layout.addWidget(
+            self.stop_button
+        )
+
         layout.addLayout(
             measurement_layout
         )
@@ -521,8 +658,8 @@ class MainWindow(QWidget):
         layout.addLayout(
             range_layout
         )
-        layout.addWidget(
-            self.start_button
+        layout.addLayout(
+            acquisition_button_layout
         )
 
         self.range_mode.currentIndexChanged.connect(
@@ -549,6 +686,9 @@ class MainWindow(QWidget):
         self.start_button.clicked.connect(
             self._start_acquisition
         )
+        self.stop_button.clicked.connect(
+            self._stop_acquisition
+        )
 
     def _set_acquisition_controls_enabled(
         self,
@@ -557,6 +697,15 @@ class MainWindow(QWidget):
         self.start_button.setEnabled(
             enabled
         )
+
+        if enabled:
+            self.stop_button.setEnabled(
+                False
+            )
+        else:
+            self.stop_button.setEnabled(
+                True
+            )
         self.mode_combo.setEnabled(
             enabled
         )
@@ -869,8 +1018,12 @@ class MainWindow(QWidget):
             True
         )
 
+        state = self.mini_pix.state()
+
         self.status_label.setText(
-            "Acquisition finished    Frames: "
+            "Acquisition ended    State: "
+            + str(state["state"])
+            + "    Frames: "
             + str(len(self.frames))
         )
 
@@ -885,6 +1038,19 @@ class MainWindow(QWidget):
         self.status_label.setText(
             message
         )
+
+    def _stop_acquisition(self):
+        self.status_label.setText(
+            "Stopping...  停止処理中"
+        )
+
+        try:
+            self.mini_pix.stop()
+
+        except Exception as error:
+            self.status_label.setText(
+                str(error)
+            )
 
     def _show_previous_frame(self):
         if self.current_frame_index <= 0:
