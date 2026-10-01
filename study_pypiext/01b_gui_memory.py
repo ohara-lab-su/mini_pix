@@ -91,7 +91,7 @@ settings_label = QLabel(
 )
 
 image_label = QLabel()
-image_label.setFixedSize(768, 768)
+# image_label.setFixedSize(768, 768)  # 画像表示領域を固定する場合
 image_label.setAlignment(Qt.AlignCenter)
 
 status_label = QLabel("Ready")
