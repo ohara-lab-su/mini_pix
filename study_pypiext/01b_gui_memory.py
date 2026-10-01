@@ -93,7 +93,20 @@ settings_label = QLabel(
     f"Clock: {CLOCK} MHz"
 )
 
-image_label = QGraphicsView()
+class ImageView(QGraphicsView):
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        items = self.scene().items()
+
+        if len(items) > 0:
+            self.fitInView(
+                self.scene().itemsBoundingRect(),
+                Qt.KeepAspectRatio,
+            )
+
+
+image_label = ImageView()
 
 # 画像表示領域を固定する場合
 # image_label.setFixedSize(768, 768)
@@ -105,6 +118,8 @@ image_label.setSizePolicy(
 )
 image_label.setAlignment(Qt.AlignCenter)
 image_label.setFrameShape(QGraphicsView.NoFrame)
+image_label.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+image_label.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
 image_scene = QGraphicsScene()
 image_label.setScene(image_scene)
@@ -254,20 +269,6 @@ range_max.valueChanged.connect(display_changed)
 interpolation_mode.currentIndexChanged.connect(display_changed)
 
 
-original_image_resize_event = image_label.resizeEvent
-
-
-def image_resize_event(event):
-    original_image_resize_event(event)
-
-    if image_item is not None:
-        image_label.fitInView(
-            image_item,
-            Qt.KeepAspectRatio,
-        )
-
-
-image_label.resizeEvent = image_resize_event
 
 
 # ------------------------------------------------------------
