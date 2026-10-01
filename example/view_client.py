@@ -489,43 +489,32 @@ class ClientView(QtWidgets.QMainWindow):
             None
         )
 
-        await client.connect()
+        await client.set_mode_all(
+            "Counting"
+        )
+        await client.set_threshold(
+            2.4
+        )
+        await client.set_bias(
+            150.0
+        )
+        await client.set_clock(
+            9.66667
+        )
 
-        subscription = None
+        stream_method = "acquire_frames"
 
-        try:
-            await client.set_mode_all(
-                "Counting"
+        if acquisition_type == "Integral":
+            stream_method = "acquire_integral"
+
+        for frame in client.stream_call(
+            stream_method,
+            count,
+            sec,
+        ):
+            self.signals.frame_received.emit(
+                frame
             )
-            await client.set_threshold(
-                2.4
-            )
-            await client.set_bias(
-                150.0
-            )
-            await client.set_clock(
-                9.66667
-            )
-
-            stream_method = "acquire_frames"
-
-            if acquisition_type == "Integral":
-                stream_method = "acquire_integral"
-
-            for frame in client.stream_call(
-                stream_method,
-                count,
-                sec,
-            ):
-                self.signals.frame_received.emit(
-                    frame
-                )
-
-        finally:
-            try:
-                await client.disconnect()
-            except Exception:
-                pass
 
     def _stop_acquisition(self):
         self.status_label.setText(
@@ -553,15 +542,7 @@ class ClientView(QtWidgets.QMainWindow):
             self.config.TIMEOUT
         )
 
-        await client.connect()
-
-        try:
-            await client.stop()
-        finally:
-            try:
-                await client.disconnect()
-            except Exception:
-                pass
+        await client.stop()
 
     def _on_frame_received(
         self,

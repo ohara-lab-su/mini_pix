@@ -17,7 +17,7 @@ from mini_pix.pixet_ctrl import MiniPixCtrl
 
 
 class _MiniPixStream:
-    """MiniPIX の VIEW 用 server-streaming。"""
+    """MiniPIX の取得結果を grpc_frame StreamCall へ渡す。"""
 
     def __init__(
         self,
@@ -25,14 +25,13 @@ class _MiniPixStream:
     ) -> None:
         self._ctrl = ctrl
 
-    def _stream_acquisition(
+    def _acquire(
         self,
         count: int,
         sec: float,
         acquisition_type: str,
     ):
         frame_queue = queue.Queue()
-        finished = object()
 
         def frame_callback(frame):
             frame_queue.put(
@@ -42,25 +41,25 @@ class _MiniPixStream:
                 )
             )
 
-        def acquisition_worker():
+        def worker():
             try:
                 if acquisition_type == "integral":
                     self._ctrl.acquire_integral(
-                        count=count,
-                        sec=sec,
+                        count,
+                        sec,
                         callback=frame_callback,
                     )
                 else:
                     self._ctrl.acquire_frames(
-                        count=count,
-                        sec=sec,
+                        count,
+                        sec,
                         callback=frame_callback,
                     )
 
                 frame_queue.put(
                     (
                         "finished",
-                        finished,
+                        None,
                     )
                 )
 
@@ -72,12 +71,12 @@ class _MiniPixStream:
                     )
                 )
 
-        worker = threading.Thread(
-            target=acquisition_worker,
-            name="MiniPixAcquisitionStream",
+        acquisition_thread = threading.Thread(
+            target=worker,
+            name="MiniPixAcquisition",
             daemon=True,
         )
-        worker.start()
+        acquisition_thread.start()
 
         while True:
             item_type, value = frame_queue.get()
@@ -97,11 +96,10 @@ class _MiniPixStream:
         count: int,
         sec: float,
     ):
-        """各完成フレームを順次送信する。"""
-        yield from self._stream_acquisition(
-            count=count,
-            sec=sec,
-            acquisition_type="frames",
+        yield from self._acquire(
+            count,
+            sec,
+            "frames",
         )
 
     def acquire_integral(
@@ -109,11 +107,10 @@ class _MiniPixStream:
         count: int,
         sec: float,
     ):
-        """PIXet が生成した最終積算フレームだけを送信する。"""
-        yield from self._stream_acquisition(
-            count=count,
-            sec=sec,
-            acquisition_type="integral",
+        yield from self._acquire(
+            count,
+            sec,
+            "integral",
         )
 
 
@@ -148,7 +145,7 @@ def pixet_grpc_server(
         ctrl.connect()
 
     stream_obj = _MiniPixStream(
-        ctrl=ctrl,
+        ctrl
     )
 
     server = create_grpc_server(
@@ -189,6 +186,7 @@ def pixet_grpc_server(
     ).result(
         timeout=2.0
     )
+    ch.close()
 
     logger.info(
         "gRPC self-check OK"
