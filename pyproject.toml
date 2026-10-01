@@ -5,53 +5,55 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mini_pix"
 
-version = "0.0.1"
+version = "0.1.0"
 
-description = "cobotta ctrl server2 (using ORiN2)"
+description = "mini pix ctrl server"
 authors = [
-  { name="Kengo NAKADA", email="kengo.nakada@email.com" }
+    { name = "Kengo NAKADA", email = "kengo.nakada@email.com" }
 ]
 readme = "README.md"
 requires-python = ">=3.7"
 #requires-python = ">=3.8"
 #requires-python = ">=3.11"
 dependencies = [
-"numpy",
-"tifffile",
-"pytest",
-"pytest-asyncio",
-"x_logger",
-"coloredlogs",
-"colorlog",
-# "ese774_frame",
-"setuptools",
-"python-dotenv",
-"fastapi",
-"fastapi-utils",
-"uvicorn",
-"pydantic",
-"starlette",
-"requests",
-"aiohttp",
-"httpx",
-#
-"pyyaml",
-"toml",
-#
-"nest_asyncio",
-"sphinx",
-"myst-parser",
-"sphinx-autobuild",
-"sphinx-rtd-theme",
-"sphinxcontrib-napoleon",
-"linkify-it-py",
-#
+    #"x_logger",
+    # "ese774_frame",
+    "numpy",
+    "tifffile",
+    "h5py",
+    "grpc-frame==0.5.11",
+    "pytest",
+    "pytest-asyncio",
+    "coloredlogs",
+    "colorlog",
+    "setuptools",
+    "python-dotenv",
+    "fastapi",
+    "fastapi-utils",
+    "uvicorn",
+    "pydantic",
+    "starlette",
+    "requests",
+    "aiohttp",
+    "httpx",
+    #
+    "pyyaml",
+    "toml",
+    #
+    "nest_asyncio",
+    "sphinx",
+    "myst-parser",
+    "sphinx-autobuild",
+    "sphinx-rtd-theme",
+    "sphinxcontrib-napoleon",
+    "linkify-it-py",
+    #
 ]
 
 
 [project.optional-dependencies]
 view = [
-"PyQt5",
+    "PyQt5",
 ]
 
 [tool.pytest.ini_options]
