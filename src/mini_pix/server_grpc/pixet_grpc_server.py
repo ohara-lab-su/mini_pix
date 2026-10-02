@@ -49,6 +49,7 @@ class _MiniPixStream:
                         sec,
                         callback=frame_callback,
                     )
+
                 else:
                     self._ctrl.acquire_frames(
                         count,
@@ -122,7 +123,10 @@ def pixet_grpc_server(
     logger: Optional[Any] = None,
     log_level: Optional[str] = None,
 ) -> None:
-    """Start MiniPIX gRPC server."""
+    """
+    Start MiniPIX gRPC server.
+    """
+    print("pixet_grpc_server")
     if logger is None:
         import logging
 
@@ -132,6 +136,7 @@ def pixet_grpc_server(
         logging.basicConfig(level=log_level.upper())
         logger = logging.getLogger(__name__)
 
+    print("a" "")
     ctrl = MiniPixCtrl(
         logger=logger,
         log_level=log_level,

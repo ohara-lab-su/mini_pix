@@ -20,6 +20,12 @@ if __name__ == "__main__":
         logger_name=config.SERVER_LOGGER_NAME,
     )
 
+    print(config.SERVER_IP)
+    print(config.SERVER_PORT)
+    print(AUTO_CONNECT)
+    print(logger)
+    print(config.LOGGER_LEVEL)
+
     pixet_grpc_server(
         grpc_host=config.SERVER_IP,
         grpc_port=config.SERVER_PORT,
