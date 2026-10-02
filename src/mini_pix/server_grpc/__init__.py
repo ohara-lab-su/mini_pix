@@ -7,7 +7,6 @@ from mini_pix.server_grpc.sync_pixet_grpc_client import SyncPixetGrpcClient
 
 from grpc_frame import DeviceProxy, register_device_proxy
 
-
 DEVICE_PROXY_NAME = "mini_pix"
 DEVICE_PROXY_ALIASES = [
     "pixet",
@@ -41,9 +40,7 @@ def __getattr__(name):
 
         return pixet_server
 
-    raise AttributeError(
-        "module {!r} has no attribute {!r}".format(__name__, name)
-    )
+    raise AttributeError("module {!r} has no attribute {!r}".format(__name__, name))
 
 
 __all__ = [
@@ -53,5 +50,4 @@ __all__ = [
     "AsyncPixetGrpcClient",
     "SyncPixetGrpcClient",
     "pixet_grpc_server",
-    "pixet_server",
 ]
