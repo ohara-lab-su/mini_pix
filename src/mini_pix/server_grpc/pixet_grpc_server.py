@@ -126,7 +126,6 @@ def pixet_grpc_server(
     """
     Start MiniPIX gRPC server.
     """
-    print("pixet_grpc_server")
     if logger is None:
         import logging
 
@@ -136,7 +135,6 @@ def pixet_grpc_server(
         logging.basicConfig(level=log_level.upper())
         logger = logging.getLogger(__name__)
 
-    print("a" "")
     ctrl = MiniPixCtrl(
         logger=logger,
         log_level=log_level,
