@@ -17,6 +17,7 @@ requires-python = ">=3.7"
 #requires-python = ">=3.11"
 dependencies = [
     #"x_logger",
+    "xlogger-py",
     # "ese774_frame",
     "numpy",
     "tifffile",
