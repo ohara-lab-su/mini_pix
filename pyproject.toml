@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mini_pix"
+name = "mini-pix"
 
-version = "0.1.1"
+version = "0.1.2"
 
 description = "mini pix ctrl server"
 authors = [
@@ -19,14 +19,18 @@ dependencies = [
     #"x_logger",
     "xlogger-py",
     # "ese774_frame",
+    #
     "numpy",
     "tifffile",
     "h5py",
+    #
+    "coloredlogs",
+    "colorlog",
+    #
     "grpc-frame==0.5.11",
     "pytest",
     "pytest-asyncio",
-    "coloredlogs",
-    "colorlog",
+    #
     "setuptools",
     "python-dotenv",
     "fastapi",
