@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mini-pix"
 
-version = "0.1.2"
+version = "0.1.3"
 
 description = "mini pix ctrl server"
 authors = [
@@ -19,6 +19,7 @@ dependencies = [
     #"x_logger",
     "xlogger-py",
     # "ese774_frame",
+    "grpc-frame",
     #
     "numpy",
     "tifffile",
@@ -27,7 +28,7 @@ dependencies = [
     "coloredlogs",
     "colorlog",
     #
-    "grpc-frame==0.5.11",
+    #"grpc-frame==0.5.11",
     "pytest",
     "pytest-asyncio",
     #
