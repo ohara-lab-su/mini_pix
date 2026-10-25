@@ -1,17 +1,18 @@
-# mini-Pix制御
-view on [github](https://github.com/ohara-lab-su/cobotta2/) / [ohara-lab-su (doc)](https://ohara-lab-su.github.io/)
+# mini_pix documentation
 
----
+<a href="https://ohara-lab-su.github.io/mini_pix/en/index.html">English</a> | <a href="https://ohara-lab-su.github.io/mini_pix/jp/index.html">日本語</a>
+
+Python control and remote access documentation for the MiniPIX detector.
+
+
+
+
 ```{toctree}
-:maxdepth: 2
-:caption: Contents:
+ :maxdepth: 2
+ :caption: Documentation
 
-api/modules
+manual/index
 tutorials/index
 function/index
+api/index
 ```
----
-
----
-## 作者
-- Kengo NAKADA
