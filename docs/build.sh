@@ -1,34 +1,35 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOCS_DIR="$SCRIPT_DIR"
-ROOT_DIR="$(cd "$DOCS_DIR/.." && pwd)"
-SRC_DIR="$ROOT_DIR/src"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DOCS="$ROOT/docs"
+OUT="$DOCS/_build/html"
 
-PKG_NAME="min_pix"   # パッケージ名を明示
+if [ ! -d "$ROOT/src/mini_pix" ]; then
+  echo "Error: src/mini_pix is required for API documentation." >&2
+  exit 1
+fi
 
-export PYTHONPATH="$SRC_DIR:${PYTHONPATH:-}"
+command -v sphinx-apidoc >/dev/null || { echo "Error: sphinx-apidoc is not installed." >&2; exit 1; }
+command -v sphinx-build >/dev/null || { echo "Error: sphinx-build is not installed." >&2; exit 1; }
 
-echo "Cleaning build..."
-rm -rf "$DOCS_DIR/_build" "$DOCS_DIR/api"
-mkdir -p "$DOCS_DIR/api"
+python "$DOCS/validate_docs.py"
 
-echo "Generating API stubs with sphinx-apidoc..."
-sphinx-apidoc -o "$DOCS_DIR/api" "$SRC_DIR/$PKG_NAME" -f --module-first
+rm -rf "$OUT"
+mkdir -p "$OUT"
 
-echo "Building HTML..."
-sphinx-build -b html "$DOCS_DIR" "$DOCS_DIR/_build/html"
+for LANG_CODE in en jp; do
+  API_DIR="$DOCS/$LANG_CODE/api"
+  mkdir -p "$API_DIR"
+  sphinx-apidoc --force --module-first --output-dir "$API_DIR" "$ROOT/src/mini_pix"
+done
 
-echo "Done."
+# Build three independent HTML trees. The site root is a real Sphinx build,
+# not a redirect or a copy of the English output.
+DOC_LANGUAGE=en sphinx-build -n -W --keep-going -b html -c "$DOCS" "$DOCS/en" "$OUT"
+DOC_LANGUAGE=en sphinx-build -n -W --keep-going -b html -c "$DOCS" "$DOCS/en" "$OUT/en"
+DOC_LANGUAGE=ja sphinx-build -n -W --keep-going -b html -c "$DOCS" "$DOCS/jp" "$OUT/jp"
 
-echo "Creating local redirect index.html..."
-
-cat > "$DOCS_DIR/index.html" << 'HTML'
-<!doctype html>
-<meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=./_build/html/">
-<link rel="canonical" href="./_build/html/">
-<title>Redirecting…</title>
-<p>Redirecting to <a href="./_build/html/">./_build/html/</a></p>
-HTML
+if [ -f "$DOCS/_robots.txt" ]; then
+  cp "$DOCS/_robots.txt" "$OUT/robots.txt"
+fi

@@ -3,19 +3,18 @@
 [![en](https://img.shields.io/badge/lang-en-red.svg)](https://github.com/ohara-lab-su/mini_pix/blob/main/README.en.md)
 [![ja](https://img.shields.io/badge/lang-ja-yellow.svg)](https://github.com/ohara-lab-su/mini_pix/blob/main/README.md)
 
-ADVACAM MiniPIX / Timepix を PIXet Python API から制御し、ローカル制御および `grpc_frame` を用いたリモート制御を行うための
-Python パッケージです。
+A Python package for controlling ADVACAM MiniPIX / Timepix through the PIXet Python API, both locally and remotely using `grpc_frame`.
 
-v0.1.0 は、MiniPIX 実機を接続したサーバーと別マシンのクライアント間で、 以下の動作を確認した最初の基準版です。
+Version 0.1.0 is the first baseline release verified with a MiniPIX connected to a server and a client running on a separate machine. The following operations were tested:
 
-- Frames 測定
-- Integral 測定
-- リモート VIEW
-- クライアント側 TIFF / PNG 保存
+- Frames acquisition
+- Integral acquisition
+- Remote VIEW
+- Client-side TIFF / PNG saving
 
-## アーキテクチャ
+## Architecture
 
-`mini_pix` は、検出器を直接扱うローカル制御層と、gRPC を介したリモート制御層を分離しています。
+`mini_pix` separates the local detector-control layer from the remote-control layer over gRPC.
 
 ```text
 Client
@@ -34,54 +33,42 @@ PIXet Python API (pypixet)
 MiniPIX / Timepix
 ```
 
-サーバー側では PIXet Python API と MiniPIX 実機が必要です。
+The server requires the PIXet Python API and a physical MiniPIX detector.
 
-クライアント側では PIXet Python API および `pypixet` は不要です。 `mini_pix.server_grpc` はクライアント API の import
-時にサーバー実装を読み込まず、 `pixet_grpc_server` または `pixet_server` が必要になった時だけサーバー実装を遅延 import
-します。
+The client does not require the PIXet Python API or `pypixet`. When importing the client API, `mini_pix.server_grpc` does not load the server implementation. It imports that implementation lazily only when `pixet_grpc_server` or `pixet_server` is needed.
 
-## v0.1.0 に至るまでの経緯
+## Development history leading to v0.1.0
 
-v0.1.0 は、従来の v0.0.x 系をそのまま拡張した版ではありません。
+Version 0.1.0 is not simply an extension of the earlier v0.0.x series.
 
-v0.0.4 までに DeviceProxy、Frames、Integral、gRPC client などは実装され、次版を v0.0.5
-とする想定で開発を進めていました。しかし、それまでの確認にはX線を入れない試験が含まれており、通信や API
-呼び出しが完了することと、検出器として正しい画像が得られることを十分に分離して検証できていませんでした。
+By v0.0.4, DeviceProxy, Frames, Integral, and the gRPC client had been implemented, and development was proceeding toward an anticipated v0.0.5 release. However, some of the earlier tests had been performed without X-ray irradiation. Consequently, successful communication and API calls had not been sufficiently distinguished from acquisition of physically correct detector images.
 
-その後、実際にX線を入れて PIXet Pro GUI と Python API の取得画像を比較したところ、Python 側が公式 GUI
-の挙動を再現していないことが判明しました。このため旧実装へ修正を積み重ねず、PIXet Python API
-の最小ローカルコードまで戻り、実機制御を段階的に再構築しました。
+Subsequent measurements under X-ray irradiation, comparing images from the PIXet Pro GUI with those from the Python API, revealed that the Python implementation did not reproduce the behavior of the official GUI. Rather than layering fixes onto the old implementation, development returned to minimal local code using the PIXet Python API and progressively rebuilt physical detector control.
 
-再設計の順序は、PIXet Pro GUI での基準動作確認、最小 API コード、calibration / device configuration、raw frame、GUI 表示、複数
-frame、class 化、callback、保存、Integral、`MiniPixCtrl` への統合、最後に gRPC / remote VIEW、です。この再構築後の実装を v0.1.0
-とし、以後の基準版とします。
+The redesign proceeded in this order: baseline verification with the PIXet Pro GUI; minimal API code; calibration / device configuration; raw frames; GUI display; multiple frames; class-based implementation; callbacks; saving; Integral acquisition; integration into `MiniPixCtrl`; and finally gRPC / remote VIEW. The resulting implementation became v0.1.0 and serves as the baseline for subsequent releases.
 
-### 再設計時のローカル検証コード
+### Local validation code used during the redesign
 
-- `01a.py`: PIXet core 起動、実機認識、mode / threshold、`doSimpleAcquisition()` の基本動作を最小構成で確認。
-- `01b_tiff.py`: GUI の基準条件に合わせ、`PX_FTYPE_NONE` から `frame.data()` を直接取得し raw TIFF として保存。SDK の画像出力と
-  raw detector data を分離して確認。
-- `01b_gui_memory.py`: memory frame を直接表示。raw data と表示処理を分離し、PIXet GUI と上下方向を合わせる処理、Auto /
-  Manual range、Nearest / Smooth を検証。
-- `01c_gui_memory.py`: device 初期化、設定、1 frame 取得を GUI から関数として分離。
-- `01d_gui_function.py`: 複数 frame の一括取得と、測定終了後の全 frame 取得を関数として整理。
-- `01e_gui_class.py`: PIXet / MiniPIX の初期化、設定、測定、終了処理を GUI 非依存 class にまとめ、制御層と表示層を分離。
-- `01f_gui_callback.py`: `PX_EVENT_ACQ_FINISHED` を使い、Frames 測定中に各 frame を callback で取得。callback
-  なしの測定終了後取得も維持。
-- `01g_gui_save_intAcq.py`: TIFF / HDF5 / PIXet native、Stop / state、Integral を追加。Integral は
-  `doSimpleIntegralAcquisition()` を使用し、Python 側では積算しない方式を確立。
+- `01a.py`: Verified PIXet core startup, physical-device detection, mode / threshold settings, and basic `doSimpleAcquisition()` behavior in a minimal configuration.
+- `01b_tiff.py`: Matched the GUI baseline conditions, obtained `frame.data()` directly with `PX_FTYPE_NONE`, and saved raw TIFF files. This distinguished SDK image output from raw detector data.
+- `01b_gui_memory.py`: Displayed memory frames directly. Separated raw data from display processing and verified vertical orientation matching the PIXet GUI, Auto / Manual range, and Nearest / Smooth rendering.
+- `01c_gui_memory.py`: Separated device initialization, configuration, and single-frame acquisition into functions independent of the GUI.
+- `01d_gui_function.py`: Organized batch acquisition of multiple frames and retrieval of all frames after acquisition into functions.
+- `01e_gui_class.py`: Encapsulated PIXet / MiniPIX initialization, configuration, acquisition, and shutdown in a GUI-independent class, separating control and display layers.
+- `01f_gui_callback.py`: Used `PX_EVENT_ACQ_FINISHED` to retrieve each frame via callback during Frames acquisition, while retaining post-acquisition retrieval without callbacks.
+- `01g_gui_save_intAcq.py`: Added TIFF / HDF5 / PIXet native saving, Stop / state, and Integral acquisition. Established use of `doSimpleIntegralAcquisition()` for Integral acquisition rather than summing frames in Python.
 
-この系列は別実装ではなく、現在の `pixet_ctrl.py`、`view_local.py`、`view_client.py` に至る実機検証・再設計の過程です。
+These files are not an independent implementation; they document the physical-device validation and redesign process that led to the current `pixet_ctrl.py`, `view_local.py`, and `view_client.py`.
 
-## 主なモジュール
+## Main modules
 
 ### `mini_pix.pixet_ctrl.MiniPixCtrl`
 
-MiniPIX / Timepix のローカル制御クラスです。
+The local control class for MiniPIX / Timepix.
 
-gRPC、GUI、server/client 設定は扱わず、PIXet Python API を直接使用します。
+It uses the PIXet Python API directly and does not handle gRPC, GUI, or server/client configuration.
 
-主な機能:
+Main methods:
 
 - `connect()` / `disconnect()`
 - `set_mode_all()`
@@ -103,11 +90,11 @@ gRPC、GUI、server/client 設定は扱わず、PIXet Python API を直接使用
 - `get_acq_frame_count()`
 - `get_acq_frames()`
 
-`MiniPixCtrl` の `logger` は必須です。
+The `logger` argument is required for `MiniPixCtrl`.
 
-### Frames 測定
+### Frames acquisition
 
-通常のフレーム測定です。
+Standard frame acquisition:
 
 ```python
 result = ctrl.acquire_frames(
@@ -116,9 +103,9 @@ result = ctrl.acquire_frames(
 )
 ```
 
-PIXet の acquisition event を利用できる場合は、 `PX_EVENT_ACQ_FINISHED` ごとに最新フレームを取得し、callback に渡します。
+When PIXet acquisition events are available, the latest frame is retrieved and passed to the callback for each `PX_EVENT_ACQ_FINISHED` event.
 
-### Integral 測定
+### Integral acquisition
 
 ```python
 result = ctrl.acquire_integral(
@@ -127,16 +114,13 @@ result = ctrl.acquire_integral(
 )
 ```
 
-Integral は PIXet の `doSimpleIntegralAcquisition()` を使用します。 Python 側で Frames の画像を加算して Integral
-を生成する実装ではありません。
+Integral acquisition uses PIXet's `doSimpleIntegralAcquisition()`. It does not generate an integral image by summing Frames images in Python.
 
-callback を指定した場合も、Integral では最終積算フレームに対して1回だけ呼び出されます。
+Even when a callback is specified, Integral acquisition invokes it only once, for the final integrated frame.
 
-## フレームデータ
+## Frame data
 
-取得フレームは辞書として扱います。
-
-主な要素は次のとおりです。
+Acquired frames are represented as dictionaries with the following main entries:
 
 ```text
 name
@@ -149,13 +133,13 @@ nonzero
 subframes
 ```
 
-`data` は NumPy の2次元配列です。
+`data` is a two-dimensional NumPy array.
 
-検出器から取得した配列は保存用 raw data として保持し、 表示のための変換とは分離します。
+The array obtained from the detector is retained as raw data for saving, separately from any transformations used for display.
 
-## 保存
+## Saving
 
-`MiniPixCtrl.acquire()` / `acquire_frames()` / `acquire_integral()` は、 サーバー側保存として次を扱います。
+`MiniPixCtrl.acquire()`, `acquire_frames()`, and `acquire_integral()` support the following server-side save formats:
 
 ```text
 NONE
@@ -166,34 +150,33 @@ PIXET_NATIVE
 
 ### TIFF
 
-1 frame を 1 TIFF として保存します。
+Each frame is saved as a separate TIFF file.
 
-表示用の正規化などを行わず、取得した数値配列をそのまま `tifffile` で保存します。
+The acquired numerical array is saved directly with `tifffile`, without display normalization or other visualization processing.
 
 ### HDF5
 
-Frames 測定ではフレームごとに dataset へ追記し、逐次 `flush()` します。
+For Frames acquisition, each frame is appended to a dataset, followed by an immediate `flush()`.
 
-Integral 測定では最終積算フレームを保存します。
+For Integral acquisition, the final integrated frame is saved.
 
-dataset の dtype は取得した NumPy 配列の dtype を使用します。
+The dataset uses the dtype of the acquired NumPy array.
 
 ### PIXET_NATIVE
 
-PIXet 自身のファイル保存機能を使用します。
+Uses PIXet's own file-saving functionality.
 
 ## gRPC
 
-### サーバー
+### Server
 
-`mini_pix.server_grpc.pixet_grpc_server()` が `MiniPixCtrl` を生成し、 `grpc_frame.grpc_server.create_grpc_server()`
-に公開します。
+`mini_pix.server_grpc.pixet_grpc_server()` creates `MiniPixCtrl` and exposes it through `grpc_frame.grpc_server.create_grpc_server()`.
 
-通常の制御 API は unary RPC として公開されます。
+Ordinary control APIs are exposed as unary RPCs.
 
-Frames / Integral の逐次画像転送には `grpc_frame` の `StreamCall` を使用します。
+Incremental image transfer for Frames / Integral acquisition uses `grpc_frame`'s `StreamCall`.
 
-サーバー起動例は `example/start_minipix_server.py` です。
+A server startup example is provided in `example/start_minipix_server.py`.
 
 ```python
 from mini_pix.config import Config
@@ -218,15 +201,15 @@ pixet_grpc_server(
 
 ### DeviceProxy
 
-`mini_pix.server_grpc` は `grpc_frame.DeviceProxy` に MiniPIX client を登録します。
+`mini_pix.server_grpc` registers the MiniPIX client with `grpc_frame.DeviceProxy`.
 
-標準名:
+Default name:
 
 ```text
 mini_pix
 ```
 
-alias:
+Aliases:
 
 ```text
 pixet
@@ -235,7 +218,7 @@ MiniPixCtrl
 pixet_grpc
 ```
 
-同期 client の例:
+Synchronous client example:
 
 ```python
 from mini_pix.server_grpc import DeviceProxy
@@ -249,11 +232,11 @@ client = DeviceProxy(
 )
 ```
 
-`async_mode=False` では `SyncPixetGrpcClient`、 `async_mode=True` では `AsyncPixetGrpcClient` を使用します。
+`async_mode=False` uses `SyncPixetGrpcClient`; `async_mode=True` uses `AsyncPixetGrpcClient`.
 
 ### Client-side save
 
-`SyncPixetGrpcClient` / `AsyncPixetGrpcClient` の `acquire_frames()` と `acquire_integral()` は、クライアント側保存に対応します。
+`acquire_frames()` and `acquire_integral()` in `SyncPixetGrpcClient` / `AsyncPixetGrpcClient` support client-side saving.
 
 ```python
 client.acquire_frames(
@@ -265,47 +248,47 @@ client.acquire_frames(
 )
 ```
 
-対応するクライアント側保存形式:
+Supported client-side file extensions:
 
 - `.tif`
 - `.tiff`
 - `.png`
 
-TIFF は raw 数値配列を保存します。
+TIFF files preserve the raw numerical array.
 
-PNG は表示用としてフレームごとに min-max 正規化し、 16 bit grayscale PNG として保存します。
+PNG files are intended for display: each frame is min-max normalized and saved as a 16-bit grayscale PNG.
 
 ## VIEW
 
 ### `example/view_local.py`
 
-`MiniPixCtrl` を直接使用するローカル VIEW です。
+A local VIEW that directly uses `MiniPixCtrl`.
 
-gRPC を使用せず、`MiniPixCtrl` の callback からフレームを受け取ります。
+It does not use gRPC and receives frames through `MiniPixCtrl` callbacks.
 
 ### `example/view_client.py`
 
-別マシンから gRPC 経由で使用する VIEW です。
+A VIEW for use from a separate machine over gRPC.
 
-- Frames / Integral 切り替え
-- count / acquisition time 設定
-- detector mode / threshold / bias / clock 設定
-- `StreamCall` によるフレーム受信
-- 受信済みフレームのローカル履歴
-- slider と前後ボタンによる履歴表示
+- Switch between Frames and Integral acquisition
+- Configure count / acquisition time
+- Configure detector mode / threshold / bias / clock
+- Receive frames through `StreamCall`
+- Maintain a local history of received frames
+- Browse history using a slider and previous/next buttons
 - Auto / Manual display range
-- nearest / smooth 表示
+- Nearest / Smooth rendering
 - Stop
 
-クライアント VIEW は `pypixet` を必要としません。
+The client VIEW does not require `pypixet`.
 
-## example
+## Examples
 
 ### `measure_simple.py`
 
-Frames 測定の同期クライアント例です。
+Synchronous client example for Frames acquisition.
 
-現在のサンプル設定:
+Current sample settings:
 
 ```text
 Mode      : Counting
@@ -316,13 +299,13 @@ Count     : 1
 Time      : 1.0 s
 ```
 
-TIFF 保存が有効で、PNG 保存例はコメントとして残しています。
+TIFF saving is enabled; the PNG saving example remains commented out.
 
 ### `measure_integral.py`
 
-Integral 測定の同期クライアント例です。
+Synchronous client example for Integral acquisition.
 
-現在のサンプル設定:
+Current sample settings:
 
 ```text
 Mode      : Counting
@@ -333,17 +316,17 @@ Count     : 1
 Time      : 10.0 s
 ```
 
-TIFF 保存が有効で、PNG 保存例はコメントとして残しています。
+TIFF saving is enabled; the PNG saving example remains commented out.
 
 ### `start_minipix_server.py`
 
-`mini_pix.yaml` を読み込み、MiniPIX gRPC server を起動します。
+Reads `mini_pix.yaml` and starts the MiniPIX gRPC server.
 
-## 設定ファイル
+## Configuration file
 
-`example/mini_pix.yaml` の現在の項目:
+Current entries in `example/mini_pix.yaml`:
 
-``` yaml
+```yaml
 SERVER_IP: "10.170.10.38"
 SERVER_PORT: 50051
 CLIENT_LOGGER_NAME: "mini_pix_client"
@@ -353,30 +336,27 @@ LOGGER_LEVEL: "debug"
 ASYNC_MODE: false
 ```
 
-IP address などは使用環境に合わせて変更してください。
+Change the IP address and other settings to match your environment.
 
-## v0.1.0 で確認済みの構成
+## Configuration verified with v0.1.0
 
-v0.1.0 では、MiniPIX / PIXet を接続したサーバーと別マシンのクライアント間で、
+In v0.1.0, operation was verified between a server connected to MiniPIX / PIXet and a client on a separate machine using:
 
 - `view_client.py`
 - `measure_simple.py`
 - `measure_integral.py`
 
-の動作を確認しています。
-
-これは v0.1.0 の基準動作とします。
+These are the baseline verified operations for v0.1.0.
 
 ------------------------------------------------------------------------
 
-## PIXet / pypixet セットアップ
+## PIXet / pypixet setup
 
 ## Calibration / device configuration
 
-MiniPIX では Python API が import でき、実機が認識されるだけでは十分ではありません。対象個体に対応する device
-configuration / calibration XML が正しくロードされることが重要です。
+For MiniPIX, successfully importing the Python API and detecting the physical device is not sufficient. Correct loading of the device configuration / calibration XML corresponding to the specific detector is essential.
 
-今回の対象は次の実機です。
+The device used here was:
 
 ```text
 Device : MiniPIX D08-W0313
@@ -385,9 +365,9 @@ Chip   : Timepix
 Sensor : Si, 500 µm
 ```
 
-### X線実測で判明した問題
+### Problem identified through X-ray measurements
 
-公式 PIXet Pro GUI では、次の条件で正常な画像を確認しました。
+The official PIXet Pro GUI produced correct images under these conditions:
 
 ```text
 Mode      : Counting
@@ -397,19 +377,17 @@ Clock     : 9.66667 MHz
 Time      : 1 s
 ```
 
-同じ実機を Python API から操作した初期の最小コードでは、X線を入れた実測時に GUI
-と同じ画像挙動を再現できませんでした。mode、threshold、bias、clock の値だけを合わせても解決せず、個体固有 XML
-のロードが重要な差であることが判明しました。
+Initial minimal Python API code operating the same device did not reproduce the GUI's image behavior under actual X-ray irradiation. Matching mode, threshold, bias, and clock values alone did not resolve the discrepancy. Loading the device-specific XML proved to be a critical difference.
 
-### USB 付属 Calibration XML
+### Calibration XML supplied on USB
 
-付属USBには個体用ファイル
+The supplied USB drive contains the device-specific file:
 
 ```text
 Calibration/MiniPIX-D08-W0313.xml
 ```
 
-があります。API 環境ではこれを PIXet API ディレクトリの `factory` に配置します。
+For the API environment, place it in the `factory` directory of the PIXet API installation:
 
 ```text
 C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64
@@ -417,49 +395,44 @@ C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64
    └─ MiniPIX-D08-W0313.xml
 ```
 
-この配置後、Python API の取得画像の挙動は公式 GUI にほぼ一致しました。
+After placing this file, the images acquired through the Python API behaved almost identically to those from the official GUI.
 
-したがって v0.1.0 のサーバー環境では、Python 3.7、DLL、`pixet.ini` だけでなく、使用する MiniPIX 個体に対応する XML
-の配置までをセットアップの一部として扱います。
+Therefore, the v0.1.0 server setup includes not only Python 3.7, DLLs, and `pixet.ini`, but also installation of the XML corresponding to the specific MiniPIX detector.
 
-### `factory` と `configs`
+### `factory` and `configs`
 
-PIXet core は保存済みの `configs` を優先して読み、使用可能な設定がない場合に `factory` の個体初期設定を使用します。
-`configs` は終了処理で生成・更新され、次回起動時の現在設定として使用されます。
+PIXet core preferentially loads saved configurations from `configs`; if no usable configuration exists, it uses the device's initial settings from `factory`. The `configs` directory is created or updated during shutdown and its contents are used as the current configuration at the next startup.
 
-したがって、`factory` の個体用 calibration XML と、PIXet が実行後に `configs` に保存した XML は役割が異なります。また、公式
-GUI が使用・保存した XML と Python API 側で生成された XML には実際に項目・値の差が確認されたため、両者を同一ファイルとして扱いません。
+Thus, the device-specific calibration XML in `factory` and the XML saved by PIXet into `configs` after execution have different roles. Actual differences in entries and values were also observed between XML used or saved by the official GUI and XML generated on the Python API side; these must not be treated as interchangeable files.
 
-この問題は単なるインストール上の注意ではなく、v0.0.x 系から v0.1.0
-へ再設計する直接の契機です。以後、API/通信の成功や画像ファイル生成だけで検出器制御の正しさを判断せず、公式 GUI
-と同じ実機・測定条件でX線画像を比較することを実機検証の基準とします。
+This issue is more than an installation caveat: it directly motivated the redesign from v0.0.x to v0.1.0. Going forward, successful API calls, communication, or image-file generation alone are not considered proof of correct detector control. The standard for physical-device verification is to compare X-ray images against the official GUI using the same detector and measurement conditions.
 
-以下は MiniPIX を直接接続するサーバー側のセットアップ情報です。
+The following sections describe setup on the server directly connected to MiniPIX.
 
-### PIXet Install
+### PIXet installation
 
 ### Downloads
 
 - [Advacam Downloads](https://advacam.com/downloads/)
-- もしくは付属のUSB
+- Alternatively, use the supplied USB drive.
 
-### ドライバなどの導入
+### Installing drivers and related software
 
-- シリアルドライバ: USB の Drivers ディレクトリ以下の setup を実行 (検出器は外した状態で入れる
-- GUIの導入 & ドライバ: USB の Pixet/Pixet_pro_windows の実行
-- 再起動
+- Serial driver: Run the installer under the USB drive's `Drivers` directory (with the detector disconnected).
+- GUI and drivers: Run the installer under `Pixet/Pixet_pro_windows` on the USB drive.
+- Restart the computer.
 
-### Python API のための準備
+### Prerequisites for the Python API
 
-- [Microsoft Visual C++ Redistributable 2015--2022 (x64)](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-c-v14-redistributable)
+- [Microsoft Visual C++ Redistributable 2015–2022 (x64)](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-c-v14-redistributable)
 
-### Python API の導入
+### Installing the Python API
 
-- python 3.7 が必要 ([pyenv-win](https://qiita.com/probabilityhill/items/9a22f395a1e93206c846) で導入をお勧めします)
-- [Python API](#python-api-の導入など)
-- `c:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64` を準備
+- Python 3.7 is required ([pyenv-win](https://qiita.com/probabilityhill/items/9a22f395a1e93206c846) is recommended for installation).
+- See [Installing the Python API and related notes](#installing-the-python-api-and-related-notes).
+- Prepare `C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64`.
 
-## AdvaCam Docs
+## AdvaCam documentation
 
 - [PIXet](https://wiki.advacam.cz/wiki/PIXet)
 - [Pixet SDK](https://wiki.advacam.cz/wiki/Pixet_SDK)
@@ -467,32 +440,30 @@ GUI が使用・保存した XML と Python API 側で生成された XML には
 
 ------------------------------------------------------------------------
 
-## Python API の導入など
+## Installing the Python API and related notes
 
-- Pixet の情報 (python)
+- PIXet information for Python:
 - <https://wiki.advacam.cz/wiki/Pixet_SDK>
 - <https://wiki.advacam.cz/wiki/Python_API>
 
-Pixset フォルダにある API の zip を展開するとえられる doc PDF 集がある。
+Documentation PDFs are included in the API ZIP archive located in the PIXet folder.
 
-USB ファイルの Piext フォルダにある ZIP ファイルを展開することで 得られる。pip や setup.py などは存在しないために、
-基本的にモジュールファイル (zip解凍で得られる) があるところでも python プログラムを実行するか、後述する形で
-`site.addsitedir(pixet_dir)` などとして使えるようにする
+Extract the ZIP archive from the PIXet folder on the supplied USB drive. There is no `pip` installer or `setup.py`; therefore, either run Python programs in the directory containing the extracted module files or make that directory importable using `site.addsitedir(pixet_dir)`, as described below.
 
-### モジュールの本体
+### Main module files
 
-- pypixet.pyd: 設定、測定、ステータス情報の取得など、すべての基本的なデバイス機能のための基本API
-- pypxproc.pyd: ピクセル処理。クラスタリングおよびスペクトルイメージングオブジェクトで使用
+- `pypixet.pyd`: Main API for basic device operations, including configuration, acquisition, and status retrieval.
+- `pypxproc.pyd`: Pixel processing, used by clustering and spectral-imaging objects.
 
-### ログディレクトリ
+### Log directory
 
-プログラム実行したディレクトリの logs サブディレクトリ
+The `logs` subdirectory under the directory from which the program is executed.
 
-### その他モジュールを使うときに必要になるファイル
+### Other files required to use the modules
 
-- pixet.ini: プログラムと同じディレクトリ
+- `pixet.ini`: Place in the same directory as the program.
 
-``` ini
+```ini
 [Settings]
 Splash=false
 
@@ -504,9 +475,9 @@ zem.dll
 zest.dll
 ```
 
-### 依存ファイル
+### Dependencies
 
-xcore.dll の依存DLL
+DLLs required by `xcore.dll`:
 
 ```text
 mfc110.dll
@@ -519,14 +490,14 @@ vccorlib140.dll
 vcruntime140.dll
 ```
 
-## Pixet の導入に関しての紆余曲折
+## Troubleshooting the PIXet installation
 
-### 付属USBにある主なファイル
+### Main files on the supplied USB drive
 
-- PIXet_Pro_1.8.3_Windows_x86_64: GUIアプリケーション本体（通常ユーザー用）
-- API_PIXet_Pro_1.8.3_Windows_x86_64: 開発者向けパッケージ（Python / C / C++ から制御するためのSDK一式）
+- `PIXet_Pro_1.8.3_Windows_x86_64`: GUI application (for regular users).
+- `API_PIXet_Pro_1.8.3_Windows_x86_64`: Developer package containing the SDK for control from Python / C / C++.
 
-API_PIXet_Pro を展開したフォルダにて python を実行すると（実行の仕方はいろいろある、後で記述する）、 以下のランタムがないのでうまく動かない。
+Running Python from the extracted `API_PIXet_Pro` directory (there are several ways to run it, described below) initially fails because the following runtime DLLs are missing:
 
 ```text
 VCRUNTIME140.dll
@@ -534,23 +505,21 @@ VCRUNTIME140_1.dll
 MSVCP140.dll
 ```
 
-が足りない。
-つまり、[Microsoft Visual C++ Redistributable 2015--2022 (x64)](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-c-v14-redistributable)
-を入れる必要がある。
+Install [Microsoft Visual C++ Redistributable 2015–2022 (x64)](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-c-v14-redistributable).
 
-しかし、基本ランタイムを入れても、まだ足りない。次に、pypiex モジュールの元である pyd を調査する。
+However, installing the standard runtime alone is still insufficient. Next, inspect the dependencies of the `.pyd` file underlying the `pypixet` module.
 
 ```python
 import pefile
 
-# pyd の依存DLL調査
+# Inspect DLL dependencies of the .pyd file.
 pe = pefile.PE(r"C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64\pypixet.pyd")
 
 for entry in pe.DIRECTORY_ENTRY_IMPORT:
     print(entry.dll.decode())
 ```
 
-で調査すると
+The result is:
 
 ```text
 PS C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64> python .\b.py
@@ -570,38 +539,38 @@ api-ms-win-crt-string-l1-1-0.dll
 PS C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64>
 ```
 
-となる。つまりpython3.7 で Pypiext はビルドされている。 つまり python3.7 を導入しないとこのモジュールは使えない。
+This shows that `pypixet` was built for Python 3.7. Python 3.7 must therefore be installed to use this particular module build.
 
     pyenv install 3.7.9
 
-問題は、3.7.9 では add_dll_directory が使えないのでパスを変更する
+Because `os.add_dll_directory()` is unavailable in Python 3.7.9, modify `PATH` instead:
 
 ```python
-# python <= 3.7
+# Python <= 3.7
 import os
 import site
 
 pixet_dir = r"C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64"
 
-# Python 3.7 では add_dll_directory は使えないため PATH を変更
+# Python 3.7 has no add_dll_directory(); modify PATH instead.
 os.environ["PATH"] = pixet_dir + ";" + os.environ["PATH"]
-site.addsitedir(pixet_dir)  # .pyd を import 可能にする
+site.addsitedir(pixet_dir)  # Make .pyd files importable.
 import pypixet
 
 print("OK")
 ```
 
-とすると、git のプロジェクトは別のところにあるモジュールを使えるようになる。
+This allows a Git project located elsewhere to use the module.
 
-## python のバージョンを pyd とそろえるときの情報調査スクリプト
+## Scripts for checking Python version compatibility with a .pyd file
 
-### python >= 3.8
+### Python >= 3.8
 
 ```python
-# 任意のディレクトリで指定のフォルダのpydが使えるものか調べる
-# python のバージョンを pyd とそろえる必要がある。
+# Check whether a .pyd in a specified directory can be loaded from elsewhere.
+# The Python version must match the version required by the .pyd file.
 
-# python >= 3.8
+# Python >= 3.8
 import os
 import ctypes
 
@@ -611,13 +580,13 @@ ctypes.WinDLL(r"C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64\pypixet
 print("OK")
 ```
 
-### python <= 3.7
+### Python <= 3.7
 
 ```python
-# 任意のディレクトリで指定のフォルダのpydが使えるものか調べる
-# python のバージョンを pyd とそろえる必要がある。
+# Check whether a .pyd in a specified directory can be loaded from elsewhere.
+# The Python version must match the version required by the .pyd file.
 
-# python <= 3.7
+# Python <= 3.7
 import os
 import ctypes
 
@@ -629,13 +598,13 @@ print("OK")
 
 ------------------------------------------------------------------------
 
-## 任意の場所にあるモジュールを動かす方法 (まとめ)
+## Using modules installed in an arbitrary directory (summary)
 
-### python >= 3.8
+### Python >= 3.8
 
 ```python
-# モジュールディレクトリを別の場所に置くときでもつかえる
-# python >= 3.8
+# Works even when the module directory is located elsewhere.
+# Python >= 3.8
 import os
 
 pixet_dir = r"C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64"
@@ -648,32 +617,31 @@ import pypixet
 print("OK")
 ```
 
-### python <= 3.7
+### Python <= 3.7
 
 ```python
-# モジュールディレクトリを別の場所に置くときでもつかえる
+# Works even when the module directory is located elsewhere.
 
-# python <= 3.7
+# Python <= 3.7
 import os
 import site
 
 pixet_dir = r"C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64"
 
-# Python 3.7 では add_dll_directory は使えないため PATH を変更
+# Python 3.7 has no add_dll_directory(); modify PATH instead.
 os.environ["PATH"] = pixet_dir + ";" + os.environ["PATH"]
-site.addsitedir(pixet_dir)  # .pyd を import 可能にする
+site.addsitedir(pixet_dir)  # Make .pyd files importable.
 import pypixet
 
 print("OK")
 ```
 
-### PIXet 2026.03 付属USBからの導入 module3
+### Installing modules from the PIXet 2026.03 supplied USB drive (module3)
 
-- python **3.7** の導入
-- [Microsoft Visual C++ Redistributable 2015--2022 (x64)](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-c-v14-redistributable)
-  導入
+- Install Python **3.7**.
+- Install [Microsoft Visual C++ Redistributable 2015–2022 (x64)](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-c-v14-redistributable).
 
-以下の形で pypiext を使う
+Use `pypixet` as follows:
 
 ```python
 import os
@@ -681,7 +649,7 @@ import site
 
 pixet_dir = r"C:\opt\ese774\modules\API_PIXet_Pro_1.8.3_Windows_x86_64"
 os.environ["PATH"] = pixet_dir + ";" + os.environ["PATH"]
-site.addsitedir(pixet_dir)  # .pyd を import 可能にする
+site.addsitedir(pixet_dir)  # Make .pyd files importable.
 
 import pypixet
 ```
