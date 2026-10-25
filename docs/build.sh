@@ -1,35 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DOCS="$ROOT/docs"
-OUT="$DOCS/_build/html"
+DOCS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$DOCS_DIR/.." && pwd)"
+SOURCE_DIR="$ROOT_DIR/src/grpc_frame"
+STAGE_DIR="$DOCS_DIR/_generated"
+OUTPUT_DIR="$DOCS_DIR/_build/html"
 
-if [ ! -d "$ROOT/src/mini_pix" ]; then
-  echo "Error: src/mini_pix is required for API documentation." >&2
-  exit 1
+if [[ ! -d "$SOURCE_DIR" ]]; then
+    echo "ERROR: grpc_frame source package not found: $SOURCE_DIR" >&2
+    exit 1
 fi
 
-command -v sphinx-apidoc >/dev/null || { echo "Error: sphinx-apidoc is not installed." >&2; exit 1; }
-command -v sphinx-build >/dev/null || { echo "Error: sphinx-build is not installed." >&2; exit 1; }
+export PYTHONPATH="$ROOT_DIR/src:${PYTHONPATH:-}"
+rm -rf "$STAGE_DIR" "$DOCS_DIR/_build"
+mkdir -p "$OUTPUT_DIR"
 
-python "$DOCS/validate_docs.py"
-
-rm -rf "$OUT"
-mkdir -p "$OUT"
-
-for LANG_CODE in en jp; do
-  API_DIR="$DOCS/$LANG_CODE/api"
-  mkdir -p "$API_DIR"
-  sphinx-apidoc --force --module-first --output-dir "$API_DIR" "$ROOT/src/mini_pix"
+for lang in en ja; do
+    mkdir -p "$STAGE_DIR/$lang"
+    cp -R "$DOCS_DIR/$lang/." "$STAGE_DIR/$lang/"
+    sphinx-apidoc --force --module-first -o "$STAGE_DIR/$lang/api" "$SOURCE_DIR"
+    if [[ ! -f "$STAGE_DIR/$lang/api/modules.rst" ]]; then
+        echo "ERROR: sphinx-apidoc did not generate api/modules.rst ($lang)" >&2
+        exit 1
+    fi
 done
 
-# Build three independent HTML trees. The site root is a real Sphinx build,
-# not a redirect or a copy of the English output.
-DOC_LANGUAGE=en sphinx-build -b html -c "$DOCS" "$DOCS/en" "$OUT"
-DOC_LANGUAGE=en sphinx-build -b html -c "$DOCS" "$DOCS/en" "$OUT/en"
-DOC_LANGUAGE=ja sphinx-build -b html -c "$DOCS" "$DOCS/jp" "$OUT/jp"
+# Build the root first, so the English index is the actual site index.
+sphinx-build -b html -c "$DOCS_DIR" -D language=en "$STAGE_DIR/en" "$OUTPUT_DIR"
+sphinx-build -b html -c "$DOCS_DIR" -D language=en "$STAGE_DIR/en" "$OUTPUT_DIR/en"
+sphinx-build -b html -c "$DOCS_DIR" -D language=ja "$STAGE_DIR/ja" "$OUTPUT_DIR/ja"
 
-if [ -f "$DOCS/_robots.txt" ]; then
-  cp "$DOCS/_robots.txt" "$OUT/robots.txt"
-fi
+for page in "$OUTPUT_DIR/index.html" "$OUTPUT_DIR/en/index.html" "$OUTPUT_DIR/ja/index.html" "$OUTPUT_DIR/en/api/modules.html" "$OUTPUT_DIR/ja/api/modules.html"; do
+    if [[ ! -f "$page" ]]; then
+        echo "ERROR: expected HTML page is missing: $page" >&2
+        exit 1
+    fi
+done
+printf 'Generated multilingual documentation: %s\n' "$OUTPUT_DIR"
