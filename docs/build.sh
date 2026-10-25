@@ -1,35 +1,35 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DOCS="$ROOT/docs"
-OUT="$DOCS/_build/html"
+DOCS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$DOCS_DIR/.." && pwd)"
+SRC_DIR="$ROOT_DIR/src"
+PKG_NAME="mini_pix"
 
-if [ ! -d "$ROOT/src/mini_pix" ]; then
-  echo "Error: src/mini_pix is required for API documentation." >&2
+export PYTHONPATH="$SRC_DIR:${PYTHONPATH:-}"
+
+if [ ! -d "$SRC_DIR/$PKG_NAME" ]; then
+  echo "Missing Python package: $SRC_DIR/$PKG_NAME" >&2
   exit 1
 fi
 
-command -v sphinx-apidoc >/dev/null || { echo "Error: sphinx-apidoc is not installed." >&2; exit 1; }
-command -v sphinx-build >/dev/null || { echo "Error: sphinx-build is not installed." >&2; exit 1; }
+rm -rf "$DOCS_DIR/_build"
 
-python "$DOCS/validate_docs.py"
-
-rm -rf "$OUT"
-mkdir -p "$OUT"
-
-for LANG_CODE in en jp; do
-  API_DIR="$DOCS/$LANG_CODE/api"
+for lang in en jp; do
+  API_DIR="$DOCS_DIR/$lang/api"
   mkdir -p "$API_DIR"
-  sphinx-apidoc --force --module-first --output-dir "$API_DIR" "$ROOT/src/mini_pix"
+  sphinx-apidoc --force --module-first -o "$API_DIR" "$SRC_DIR/$PKG_NAME"
 done
 
-# Build three independent HTML trees. The site root is a real Sphinx build,
-# not a redirect or a copy of the English output.
-DOC_LANGUAGE=en sphinx-build -n -W --keep-going -b html -c "$DOCS" "$DOCS/en" "$OUT"
-DOC_LANGUAGE=en sphinx-build -n -W --keep-going -b html -c "$DOCS" "$DOCS/en" "$OUT/en"
-DOC_LANGUAGE=ja sphinx-build -n -W --keep-going -b html -c "$DOCS" "$DOCS/jp" "$OUT/jp"
+for lang in en jp; do
+  sphinx-build -n -W --keep-going -b html -D language="$([ "$lang" = jp ] && echo ja || echo en)" -c "$DOCS_DIR" "$DOCS_DIR/$lang" "$DOCS_DIR/_build/html/$lang"
+done
 
-if [ -f "$DOCS/_robots.txt" ]; then
-  cp "$DOCS/_robots.txt" "$OUT/robots.txt"
+# The English root is built from the same source as /en/.
+sphinx-build -n -W --keep-going -b html -D language=en -c "$DOCS_DIR" "$DOCS_DIR/en" "$DOCS_DIR/_build/html"
+
+touch "$DOCS_DIR/_build/html/.nojekyll"
+
+if [ -f "$DOCS_DIR/_robots.txt" ]; then
+  cp "$DOCS_DIR/_robots.txt" "$DOCS_DIR/_build/html/robots.txt"
 fi
