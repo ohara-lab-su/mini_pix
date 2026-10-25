@@ -2,7 +2,7 @@ name: Pages
 
 on:
   push:
-    branches: [main]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -21,20 +21,25 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - uses: actions/configure-pages@v5
+          python-version: "3.12"
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
       - name: Install documentation dependencies
         run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
           python -m pip install sphinx myst-parser sphinx-rtd-theme linkify-it-py
-      - name: Build Sphinx
+      - name: Build documentation
         run: bash docs/build.sh
-      - name: Upload
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/_build/html
-      - name: Deploy
+      - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
