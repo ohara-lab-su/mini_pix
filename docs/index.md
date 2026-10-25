@@ -1,7 +1,7 @@
 # mini_pix documentation
 
 [![en](https://img.shields.io/badge/lang-en-red.svg)](https://ohara-lab-su.github.io/mini_pix/en/index.html)
-[![ja](https://img.shields.io/badge/lang-ja-yellow.svg)](https://ohara-lab-su.github.io/mini_pix/jp/index.html)
+[![ja](https://img.shields.io/badge/lang-ja-yellow.svg)](https://ohara-lab-su.github.io/mini_pix/ja/index.html)
 
 [![GitHub](https://img.shields.io/badge/GitHub-ohara--lab--su%2Fmini_pix-181717?logo=github)](https://github.com/ohara-lab-su/mini_pix/)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Documentation-222222?logo=githubpages&logoColor=white)](https://ohara-lab-su.github.io/mini_pix/en/)
