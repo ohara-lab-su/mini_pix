@@ -7,7 +7,7 @@ name = "mini-pix"
 
 version = "0.1.5"
 
-description = "mini pix ctrl server"
+description = "Python control and gRPC device-server package for the MiniPIX two-dimensional detector."
 authors = [
     { name = "Kengo NAKADA", email = "kengo.nakada@email.com" }
 ]
@@ -56,6 +56,12 @@ dependencies = [
     #
 ]
 
+
+[project.urls]
+Homepage = "https://ohara-lab-su.github.io/mini_pix/"
+Documentation = "https://ohara-lab-su.github.io/mini_pix/"
+Repository = "https://github.com/ohara-lab-su/mini_pix"
+Issues = "https://github.com/ohara-lab-su/mini_pix/issues"
 
 [project.optional-dependencies]
 view = [
